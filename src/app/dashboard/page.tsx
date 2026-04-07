@@ -182,7 +182,13 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-xs font-bold text-gray-400">{greeting.text} 👋</p>
-              <h1 className="text-xl font-black text-gray-800">여보, 사랑해요!</h1>
+              <div className="flex items-baseline gap-2">
+                <h1 className="text-2xl font-black text-gray-800 tracking-tighter">GLUV</h1>
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-bold text-gray-400 leading-none">Glucose + View</span>
+                  <span className="text-[7px] font-medium text-rose-300 leading-none mt-1 uppercase tracking-tighter">for YR Lee</span>
+                </div>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
