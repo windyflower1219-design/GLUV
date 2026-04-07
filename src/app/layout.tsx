@@ -26,7 +26,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#0f172a',
+  themeColor: '#FFF9F2',
 };
 
 export default function RootLayout({
@@ -38,10 +38,10 @@ export default function RootLayout({
     <html lang="ko" className={inter.variable}>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
-        <link rel="apple-touch-icon" href="/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
-      <body className="bg-gray-950 text-white antialiased overscroll-none">
-        <div className="max-w-md mx-auto min-h-screen relative">
+      <body className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] antialiased overscroll-none">
+        <div className="max-w-md mx-auto min-h-screen relative shadow-2xl shadow-indigo-100/20 bg-white">
           {children}
         </div>
       </body>
