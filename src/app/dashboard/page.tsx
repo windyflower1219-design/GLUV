@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Activity, TrendingUp, TrendingDown, Minus,
   Droplets, Flame, Zap, ChevronRight, Bell,
-  Target, Award
+  Target, Award, Heart, Coffee, Moon, Sun, Utensils
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -14,8 +14,9 @@ import {
 import BottomNavigation from '@/components/BottomNavigation';
 import VoiceInputModal from '@/components/VoiceInputModal';
 import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
+import { getMeals } from '@/lib/firebase/firestore';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
-import type { FoodItem } from '@/types';
+import type { FoodItem, Meal } from '@/types';
 
 // ==============================
 // 커스텀 툴팁
@@ -29,11 +30,14 @@ interface TooltipProps {
 function CustomTooltip({ active, payload, label }: TooltipProps) {
   if (active && payload && payload.length) {
     const value = payload[0].value;
-    const color = value > 140 ? '#ef4444' : value < 70 ? '#f59e0b' : '#10b981';
+    const color = value > 140 ? 'var(--color-danger)' : value < 70 ? 'var(--color-warning)' : 'var(--color-success)';
     return (
-      <div className="glass-card px-3 py-2">
-        <p className="text-xs text-slate-400">{label}</p>
-        <p className="text-sm font-bold" style={{ color }}>{value} mg/dL</p>
+      <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-gray-100 shadow-xl">
+        <p className="text-[10px] font-bold text-gray-400 mb-1">{label}</p>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+          <p className="font-black text-sm text-gray-700">{value} <span className="text-[10px] font-bold text-gray-400">mg/dL</span></p>
+        </div>
       </div>
     );
   }
@@ -49,75 +53,77 @@ interface StatCardProps {
   unit: string;
   icon: React.ReactNode;
   color: string;
-  trend?: 'up' | 'down' | 'stable';
+  bg: string;
 }
 
-function StatCard({ label, value, unit, icon, color, trend }: StatCardProps) {
+function StatCard({ label, value, unit, icon, color, bg }: StatCardProps) {
   return (
-    <div className="glass-card p-4 flex-1">
-      <div className="flex items-center justify-between mb-2">
-        <div className={`p-2 rounded-xl ${color}`}>
+    <div className="bg-white rounded-[32px] p-5 flex-1 shadow-sm border border-gray-50 hover:border-rose-100 transition-all group">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`w-10 h-10 rounded-2xl ${bg} ${color} flex items-center justify-center shadow-inner border border-white group-hover:scale-110 transition-transform`}>
           {icon}
         </div>
-        {trend === 'up' && <TrendingUp size={14} className="text-red-400" />}
-        {trend === 'down' && <TrendingDown size={14} className="text-green-400" />}
-        {trend === 'stable' && <Minus size={14} className="text-slate-400" />}
+        <div className="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center">
+          <ChevronRight size={12} className="text-gray-300" />
+        </div>
       </div>
-      <p className="text-2xl font-bold text-white mt-1">{value}</p>
-      <p className="text-xs text-slate-500">{unit}</p>
-      <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+      <div className="space-y-1">
+        <p className={`text-2xl font-black ${color}`}>{value}</p>
+        <div className="flex items-baseline gap-1">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+          <span className="text-[9px] font-medium text-gray-300">{unit}</span>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ==============================
-// 혈당 상태 게이지
+// 혈당 상태 게이지 (더 귀엽고 따뜻한 버전)
 // ==============================
 function GlucoseGauge({ value, targetMin = 70, targetMax = 140 }: { value: number; targetMin?: number; targetMax?: number }) {
   const isHigh = value > targetMax;
   const isLow = value < targetMin;
-  const isNormal = !isHigh && !isLow;
-
-  const statusConfig = {
-    normal: { label: '정상 범위', color: '#10b981', glow: 'glow-green', bgColor: 'bg-emerald-500/20' },
-    high: { label: '목표 초과', color: '#ef4444', glow: 'glow-red', bgColor: 'bg-red-500/20' },
-    low: { label: '저혈당 주의', color: '#f59e0b', glow: 'glow-yellow', bgColor: 'bg-yellow-500/20' },
-  };
-
-  const config = isHigh ? statusConfig.high : isLow ? statusConfig.low : statusConfig.normal;
-
-  // 게이지 각도 계산 (0-300mg/dL 범위를 -150° ~ 150° 에 매핑)
-  const clampedValue = Math.min(300, Math.max(0, value));
-  const angle = (clampedValue / 300) * 270 - 135;
+  
+  const config = isHigh 
+    ? { label: '조금 높아요!', color: 'text-rose-500', bg: 'bg-rose-50', icon: '🍰' }
+    : isLow 
+    ? { label: '낮은 편이에요!', color: 'text-amber-600', bg: 'bg-amber-50', icon: '🍎' }
+    : { label: '참 잘하고 있어요!', color: 'text-emerald-500', bg: 'bg-emerald-50', icon: '✨' };
 
   return (
     <div className="flex flex-col items-center">
-      <div className={`relative w-40 h-40 ${config.glow}`} style={{ filter: `drop-shadow(0 0 20px ${config.color}40)` }}>
-        {/* SVG 게이지 */}
-        <svg viewBox="0 0 120 120" className="w-full h-full">
-          {/* 배경 트랙 */}
-          <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10"
-            strokeDasharray="226 75" strokeDashoffset="-37" strokeLinecap="round" />
-          {/* 정상 범위 표시 */}
-          <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(16,185,129,0.2)" strokeWidth="10"
-            strokeDasharray="110 191" strokeDashoffset="-100" strokeLinecap="round" />
-          {/* 현재 값 */}
-          <circle cx="60" cy="60" r="48" fill="none" stroke={config.color} strokeWidth="10"
-            strokeDasharray={`${(clampedValue / 300) * 226} 301`}
-            strokeDashoffset="-37" strokeLinecap="round"
-            style={{ transition: 'stroke-dasharray 1s ease' }}
+      <div className="relative w-48 h-48 flex items-center justify-center">
+        {/* 장식용 배경 원 */}
+        <div className="absolute inset-0 rounded-full border-8 border-gray-50 shadow-inner" />
+        <div className="absolute inset-4 rounded-full border-2 border-dashed border-gray-100 animate-spin-slow" />
+        
+        {/* 수치 표시 */}
+        <div className="relative z-10 text-center">
+          <span className="text-4xl block mb-1">{config.icon}</span>
+          <p className="text-5xl font-black text-gray-800 tracking-tighter">{value}</p>
+          <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-1">mg / dL</p>
+        </div>
+
+        {/* 게이지 바 (SVG) */}
+        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full -rotate-90">
+          <circle
+            cx="50"
+            cy="50"
+            r="44"
+            fill="none"
+            stroke={isHigh ? '#fda4af' : isLow ? '#fde68a' : '#6ee7b7'}
+            strokeWidth="8"
+            strokeDasharray={`${Math.min(276, (value / 300) * 276)} 276`}
+            strokeLinecap="round"
+            className="transition-all duration-1000 ease-out"
           />
-          {/* 중앙 텍스트 */}
-          <text x="60" y="55" textAnchor="middle" fill="white" fontSize="22" fontWeight="700" fontFamily="Inter">
-            {value}
-          </text>
-          <text x="60" y="70" textAnchor="middle" fill="rgba(148,163,184,0.8)" fontSize="9" fontFamily="Inter">
-            mg/dL
-          </text>
         </svg>
       </div>
-      <div className={`mt-2 px-4 py-1.5 rounded-full ${config.bgColor}`}>
-        <p className="text-sm font-semibold" style={{ color: config.color }}>{config.label}</p>
+      
+      <div className={`mt-6 px-6 py-2 rounded-2xl ${config.bg} ${config.color} shadow-sm border border-white flex items-center gap-2`}>
+        <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+        <p className="text-xs font-black">{config.label}</p>
       </div>
     </div>
   );
@@ -128,225 +134,223 @@ function GlucoseGauge({ value, targetMin = 70, targetMax = 140 }: { value: numbe
 // ==============================
 export default function DashboardPage() {
   const [showVoiceModal, setShowVoiceModal] = useState(false);
-  const [recentMeals, setRecentMeals] = useState<Array<{
-    id: string;
-    name: string;
-    time: string;
-    calories: number;
-    glucotype: 'green' | 'yellow' | 'red';
-    insight?: string;
-  }>>([
-    { id: '1', name: '아침 - 현미밥, 된장찌개', time: '08:30', calories: 420, glucotype: 'green', insight: '혈당 안정적 ✅' },
-    { id: '2', name: '점심 - 제육볶음, 밥', time: '12:15', calories: 650, glucotype: 'yellow', insight: '식후 산책 권장 💛' },
-    { id: '3', name: '저녁 - 김치찌개, 밥', time: '18:45', calories: 480, glucotype: 'green', insight: '목표 범위 유지 ✅' },
-  ]);
+  const [todayMeals, setTodayMeals] = useState<Meal[]>([]);
+  const [latestInsight] = useState('어제보다 혈당 관리가 안정적이에요! 남편분이 정성껏 준비한 저녁 식사 덕분일까요? 오늘도 화이팅! 💕');
 
-  const [latestInsight] = useState('점심에 드신 제육볶음의 양념으로 혈당이 평소보다 18% 상승했습니다. 저녁 식사 전 10분 산책을 추천드려요! 🚶');
-
-  const { currentGlucose, averageGlucose, timeInRange, getChartData, loading } = useGlucoseData('demo_user');
+  const { currentGlucose, averageGlucose, timeInRange, getChartData, loading, fetchReadings } = useGlucoseData('demo');
   const chartData = getChartData();
 
-  const handleMealConfirm = useCallback((foods: Partial<FoodItem>[], rawText: string) => {
-    const totalCals = foods.reduce((sum, f) => sum + (f.calories ?? 0) * (f.quantity ?? 1), 0);
-    const prediction = predictGlucoseResponse(foods as FoodItem[], currentGlucose);
+  const fetchTodayData = useCallback(async () => {
+    try {
+      const meals = await getMeals('demo', new Date());
+      setTodayMeals(meals);
+    } catch (error) {
+      console.error('Error fetching today data:', error);
+    }
+  }, []);
 
-    const mealTypeLabels: Record<string, string> = {
-      green: '안전 ✅',
-      yellow: '주의 💛',
-      red: '위험 🚨',
-    };
+  useEffect(() => {
+    fetchTodayData();
+  }, [fetchTodayData]);
 
-    setRecentMeals(prev => [{
-      id: Date.now().toString(),
-      name: `방금 - ${foods.map(f => f.name).join(', ')}`,
-      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-      calories: Math.round(totalCals),
-      glucotype: prediction.riskLevel,
-      insight: mealTypeLabels[prediction.riskLevel],
-    }, ...prev]);
-  }, [currentGlucose]);
+  const handleMealConfirm = useCallback(async () => {
+    await fetchTodayData();
+    setShowVoiceModal(false);
+  }, [fetchTodayData]);
 
   const now = new Date();
-  const greeting = now.getHours() < 12 ? '좋은 아침이에요' : now.getHours() < 18 ? '좋은 오후예요' : '좋은 저녁이에요';
+  const getGreeting = () => {
+    const h = now.getHours();
+    if (h < 6) return { text: '포근한 밤이에요', icon: <Moon size={20} className="text-indigo-400" /> };
+    if (h < 12) return { text: '상쾌한 아침이에요', icon: <Sun size={20} className="text-amber-400" /> };
+    if (h < 18) return { text: '따사로운 오후예요', icon: <Sun size={20} className="text-orange-400" /> };
+    return { text: '편안한 저녁이에요', icon: <Moon size={20} className="text-rose-400" /> };
+  };
+
+  const greeting = getGreeting();
+  const totalCalories = todayMeals.reduce((s, m) => s + m.totalCalories, 0);
+  const totalCarbs = todayMeals.reduce((s, m) => s + m.totalCarbs, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-blue-950/20 to-gray-950 page-content">
+    <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">
       {/* 상단 헤더 */}
-      <header className="safe-top px-5 pt-4 pb-2">
+      <header className="safe-top px-6 pt-6 pb-2">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-slate-400">{greeting} 👋</p>
-            <h1 className="text-xl font-bold gradient-text-blue">GLUV</h1>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-gray-50">
+               {greeting.icon}
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-400">{greeting.text} 👋</p>
+              <h1 className="text-xl font-black text-gray-800">여보, 사랑해요!</h1>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/insights" className="relative w-10 h-10 rounded-full glass-card flex items-center justify-center">
-              <Bell size={18} className="text-slate-300" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
+            <Link href="/insights" className="relative w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-gray-50 active:scale-90 transition-all">
+              <Bell size={20} className="text-gray-400" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
             </Link>
           </div>
         </div>
       </header>
 
-      <div className="px-4 space-y-4">
+      <div className="px-5 space-y-5 pt-4">
 
-        {/* 현재 혈당 게이지 */}
-        <div className="glass-card p-6 text-center">
-          <p className="text-sm text-slate-400 mb-4">현재 혈당</p>
+        {/* 현재 혈당 게이지 카드 */}
+        <div className="bg-white rounded-[40px] p-8 shadow-sm border border-gray-50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-full -mr-16 -mt-16 opacity-50" />
+          <p className="text-xs font-black text-gray-300 uppercase tracking-widest text-center mb-8">현재 우리 아내 혈당</p>
           {loading ? (
-            <div className="skeleton w-40 h-40 rounded-full mx-auto" />
+            <div className="skeleton w-48 h-48 rounded-full mx-auto" />
           ) : (
             <GlucoseGauge value={currentGlucose} />
           )}
-          <p className="text-xs text-slate-500 mt-3">
-            {new Date().toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 기준 측정
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-8 py-2 px-4 bg-gray-50/50 rounded-2xl w-fit mx-auto border border-gray-50">
+             <span className="w-1 h-1 rounded-full bg-gray-300" />
+             <p className="text-[10px] font-bold text-gray-400">
+               {now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 측정됨
+             </p>
+          </div>
         </div>
 
         {/* 오늘 통계 빠른 보기 */}
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           <StatCard
-            label="평균 혈당"
-            value={averageGlucose || '--'}
-            unit="mg/dL 오늘"
-            icon={<Activity size={16} className="text-blue-400" />}
-            color="bg-blue-500/20"
-            trend="stable"
+            label="오늘 평균"
+            value={averageGlucose || '-'}
+            unit="mg/dL"
+            icon={<Activity size={20} />}
+            color="text-indigo-500"
+            bg="bg-indigo-50"
           />
           <StatCard
-            label="목표 범위율"
-            value={timeInRange || '--'}
-            unit="% TIR"
-            icon={<Target size={16} className="text-emerald-400" />}
-            color="bg-emerald-500/20"
-            trend={timeInRange >= 70 ? 'down' : 'up'}
+            label="목표 도달"
+            value={timeInRange || '-'}
+            unit="%"
+            icon={<Heart size={20} />}
+            color="text-rose-500"
+            bg="bg-rose-50"
           />
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           <StatCard
-            label="오늘 칼로리"
-            value="1,550"
-            unit="kcal / 2,000"
-            icon={<Flame size={16} className="text-orange-400" />}
-            color="bg-orange-500/20"
-            trend="stable"
+            label="섭취 칼로리"
+            value={totalCalories.toLocaleString()}
+            unit="kcal"
+            icon={<Flame size={20} />}
+            color="text-orange-500"
+            bg="bg-orange-50"
           />
           <StatCard
             label="탄수화물"
-            value="158"
-            unit="g / 250g"
-            icon={<Zap size={16} className="text-yellow-400" />}
-            color="bg-yellow-500/20"
-            trend="up"
+            value={totalCarbs}
+            unit="g"
+            icon={<Utensils size={20} />}
+            color="text-amber-500"
+            bg="bg-amber-50"
           />
-        </div>
-
-        {/* 혈당 추이 차트 */}
-        <div className="glass-card p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-white text-sm">오늘 혈당 추이</h2>
-            <Link href="/glucose" className="text-xs text-blue-400 flex items-center gap-0.5">
-              전체 보기 <ChevronRight size={14} />
-            </Link>
-          </div>
-          <ResponsiveContainer width="100%" height={140}>
-            <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
-              <defs>
-                <linearGradient id="glucoseGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="time" tick={{ fill: '#475569', fontSize: 9 }} tickLine={false} axisLine={false} />
-              <YAxis domain={[60, 200]} tick={{ fill: '#475569', fontSize: 9 }} tickLine={false} axisLine={false} />
-              <ReferenceLine y={140} stroke="rgba(239,68,68,0.3)" strokeDasharray="4 4" />
-              <ReferenceLine y={70} stroke="rgba(245,158,11,0.3)" strokeDasharray="4 4" />
-              <Tooltip content={<CustomTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="glucose"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                fill="url(#glucoseGrad)"
-                dot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
         </div>
 
         {/* AI 인사이트 배너 */}
         <Link href="/insights">
-          <div className="relative overflow-hidden rounded-2xl p-4 bg-gradient-to-r from-purple-900/60 to-blue-900/60 border border-purple-500/20">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl" />
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/30 flex items-center justify-center flex-shrink-0">
-                <Zap size={20} className="text-purple-300" />
+          <div className="relative overflow-hidden rounded-[32px] p-6 bg-gradient-to-br from-indigo-600 to-rose-400 shadow-lg shadow-indigo-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0 animate-bounce-slow">
+                <Sparkles size={24} className="text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-xs font-medium text-purple-300 mb-1">💡 AI 인사이트</p>
-                <p className="text-sm text-slate-200 leading-relaxed">{latestInsight}</p>
+                <p className="text-[10px] font-black text-white/70 mb-1 uppercase tracking-widest">오늘의 따뜻한 조언</p>
+                <p className="text-sm font-bold text-white leading-relaxed">{latestInsight}</p>
               </div>
-              <ChevronRight size={16} className="text-slate-400 flex-shrink-0 mt-1" />
+              <ChevronRight size={18} className="text-white/50 flex-shrink-0 mt-1" />
             </div>
           </div>
         </Link>
 
-        {/* 오늘 식사 기록 */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-white text-sm">오늘의 식사</h2>
-            <Link href="/meals" className="text-xs text-blue-400 flex items-center gap-0.5">
-              모두 보기 <ChevronRight size={14} />
+        {/* 혈당 추이 차트 */}
+        <div className="bg-white rounded-[40px] p-6 shadow-sm border border-gray-50">
+          <div className="flex items-center justify-between mb-6 px-1">
+            <h2 className="font-black text-gray-800 text-sm flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-indigo-400 rounded-full mr-1" />
+              혈당 변화 그래프
+            </h2>
+            <Link href="/glucose" className="text-[10px] font-bold text-indigo-400 bg-indigo-50 px-2 py-1 rounded-lg">
+              자세히 보기
             </Link>
           </div>
-          <div className="space-y-2">
-            {recentMeals.slice(0, 3).map(meal => (
-              <div key={meal.id} className="glass-card glass-card-hover p-3 flex items-center gap-3">
-                <div className={`w-2 h-10 rounded-full ${
-                  meal.glucotype === 'green' ? 'bg-emerald-500' :
-                  meal.glucotype === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
-                }`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{meal.name}</p>
-                  <p className="text-xs text-slate-400">{meal.time} · {meal.calories}kcal</p>
-                </div>
-                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${
-                  meal.glucotype === 'green' ? 'glucotype-green' :
-                  meal.glucotype === 'yellow' ? 'glucotype-yellow' : 'glucotype-red'
-                }`}>
-                  {meal.insight}
-                </span>
-              </div>
-            ))}
+          <div className="h-40 min-w-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
+                <defs>
+                  <linearGradient id="glucoseGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#818cf8" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="6 6" stroke="#f8fafc" vertical={false} />
+                <XAxis dataKey="time" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={5} />
+                <YAxis domain={[60, 200]} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} tickLine={false} axisLine={false} />
+                <ReferenceLine y={140} stroke="#fda4af" strokeDasharray="4 4" />
+                <ReferenceLine y={70} stroke="#fde68a" strokeDasharray="4 4" />
+                <Tooltip content={<CustomTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="glucose"
+                  stroke="#818cf8"
+                  strokeWidth={3}
+                  fill="url(#glucoseGrad)"
+                  dot={{ r: 4, fill: 'white', stroke: '#818cf8', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* 주간 목표 달성도 */}
-        <div className="glass-card p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Award size={16} className="text-yellow-400" />
-            <h2 className="font-semibold text-white text-sm">이번 주 목표 달성</h2>
+        {/* 오늘 식사 기록 요약 */}
+        <div className="pb-4">
+          <div className="flex items-center justify-between mb-4 px-1">
+            <h2 className="font-black text-gray-800 text-sm flex items-center gap-2">
+               <span className="w-1.5 h-4 bg-rose-400 rounded-full mr-1" />
+              오늘 드신 것들
+            </h2>
+            <Link href="/meals" className="text-[10px] font-bold text-rose-400 bg-rose-50 px-2 py-1 rounded-lg">
+              기집 보기
+            </Link>
           </div>
           <div className="space-y-3">
-            {[
-              { label: '혈당 목표 범위 유지', value: 72, color: 'from-emerald-500 to-teal-400' },
-              { label: '식사 기록 완성', value: 85, color: 'from-blue-500 to-purple-500' },
-              { label: '산책 목표 달성', value: 60, color: 'from-orange-500 to-yellow-400' },
-            ].map(({ label, value, color }) => (
-              <div key={label}>
-                <div className="flex justify-between mb-1">
-                  <span className="text-xs text-slate-400">{label}</span>
-                  <span className="text-xs font-semibold text-white">{value}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full bg-gradient-to-r ${color}`}
-                    style={{ width: `${value}%`, transition: 'width 1s ease' }}
-                  />
-                </div>
+            {todayMeals.length === 0 ? (
+              <div className="py-12 bg-white/40 rounded-[32px] border-2 border-dashed border-gray-100 flex flex-col items-center gap-2">
+                <span className="text-4xl">🍳</span>
+                <p className="text-xs font-bold text-gray-400">아직 식사 기록이 없어요!</p>
               </div>
-            ))}
+            ) : (
+              todayMeals.slice(0, 3).map(meal => (
+                <div key={meal.id} className="bg-white rounded-3xl p-4 shadow-sm border border-gray-50 flex items-center gap-4 group hover:border-rose-100 transition-all">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner border border-white ${
+                    meal.glucotypeScore === 'green' ? 'bg-emerald-50 text-emerald-500' :
+                    meal.glucotypeScore === 'yellow' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-500'
+                  }`}>
+                    {meal.glucotypeScore === 'green' ? '👍' : meal.glucotypeScore === 'yellow' ? '🤏' : '⚠️'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-black text-gray-800 truncate">
+                      {meal.parsedFoods.map(f => f.name).join(', ')}
+                    </p>
+                    <p className="text-[10px] font-bold text-gray-400 mt-0.5">
+                      {meal.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} · {meal.totalCalories} kcal
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-black px-3 py-1 rounded-full ${
+                    meal.glucotypeScore === 'green' ? 'bg-emerald-50 text-emerald-600' :
+                    meal.glucotypeScore === 'yellow' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-500'
+                  }`}>
+                    {meal.glucotypeScore === 'green' ? '좋아요' : meal.glucotypeScore === 'yellow' ? '적당해요' : '주의해요'}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -354,10 +358,10 @@ export default function DashboardPage() {
       {/* 플로팅 마이크 버튼 */}
       <button
         onClick={() => setShowVoiceModal(true)}
-        className="fab-mic"
-        aria-label="음식 음성 기록"
+        className="fab-mic bg-gray-800 shadow-xl shadow-gray-200"
+        aria-label="오늘 뭐 드셨나요?"
       >
-        <Droplets size={28} className="text-white" />
+        <Mic size={28} className="text-white" />
       </button>
 
       {/* 음성 입력 모달 */}
@@ -372,3 +376,19 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+// 헬퍼 컴포넌트 & 아이콘
+const Sparkles = ({ size, className }: { size: number; className: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+    <path d="M5 3v4" /><path d="M3 5h4" /><path d="M19 17v4" /><path d="M17 19h4" />
+  </svg>
+);
+
+const Mic = ({ size, className }: { size: number; className: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+    <line x1="12" x2="12" y1="19" y2="22" />
+  </svg>
+);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Mic, X, Send, Loader2, ChevronRight } from 'lucide-react';
+import { Mic, X, Send, Loader2, ChevronRight, Sparkles } from 'lucide-react';
 import { useVoiceInput } from '@/lib/hooks/useVoiceInput';
 import { parseMealText } from '@/lib/algorithms/mealParser';
 import type { FoodItem, VoiceParseResult } from '@/types';
@@ -47,172 +47,193 @@ export default function VoiceInputModal({ onClose, onConfirm }: VoiceInputModalP
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-sheet">
+      <div className="modal-sheet bg-[#FFFCF7] border-none shadow-2xl rounded-[40px]">
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-bold text-white">식사 기록</h2>
-            <p className="text-sm text-slate-400 mt-0.5">음성이나 텍스트로 입력하세요</p>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl shadow-sm border border-white">
+              🍱
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-gray-800">식사 기록하기</h2>
+              <p className="text-xs font-bold text-gray-400 mt-0.5">무엇을 맛있게 드셨나요?</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+            className="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition-all active:scale-90"
           >
-            <X size={18} className="text-slate-300" />
+            <X size={20} className="text-gray-400" />
           </button>
         </div>
 
         {/* 음성 입력 영역 */}
         {!parseResult && (
-          <>
-            <div className="flex flex-col items-center py-8 space-y-4">
+          <div className="animate-fade-in">
+            <div className="flex flex-col items-center py-6 space-y-6">
               {/* 마이크 버튼 */}
               <div className="relative">
                 {isListening && (
-                  <div className="absolute inset-0 rounded-full bg-red-500/30 animate-ping" />
+                  <>
+                    <div className="absolute -inset-4 rounded-full bg-rose-400/20 animate-ping" />
+                    <div className="absolute -inset-8 rounded-full bg-rose-400/10 animate-pulse" />
+                  </>
                 )}
                 <button
                   onClick={isListening ? stopListening : startListening}
                   disabled={!isSupported || isParsing}
-                  className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  className={`relative w-24 h-24 rounded-[32px] flex items-center justify-center transition-all duration-500 shadow-xl ${
                     isListening
-                      ? 'bg-red-500 shadow-[0_0_30px_rgba(239,68,68,0.5)]'
-                      : 'bg-gradient-to-br from-blue-500 to-purple-600 shadow-[0_0_30px_rgba(59,130,246,0.4)]'
-                  } disabled:opacity-40`}
-                  aria-label={isListening ? '음성 입력 중지' : '음성 입력 시작'}
+                      ? 'bg-rose-500 shadow-rose-200 rotate-12 scale-110'
+                      : 'bg-white border-4 border-rose-50 hover:border-rose-100'
+                  } disabled:opacity-40 active:scale-95`}
+                  aria-label={isListening ? '듣고 있어요!' : '말씀해주세요'}
                 >
                   {isParsing ? (
-                    <Loader2 size={32} className="text-white animate-spin" />
+                    <Loader2 size={40} className="text-rose-500 animate-spin" />
                   ) : isListening ? (
-                    <div className="flex gap-1 items-end h-8">
-                      {[...Array(5)].map((_, i) => (
-                        <div key={i} className="wave-bar bg-white" style={{ animationDelay: `${i * 0.1}s` }} />
+                    <div className="flex gap-2 items-center justify-center h-10">
+                      {[...Array(4)].map((_, i) => (
+                        <div 
+                          key={i} 
+                          className="w-1.5 h-6 bg-white rounded-full animate-wave" 
+                          style={{ animationDelay: `${i * 0.15}s` }} 
+                        />
                       ))}
                     </div>
                   ) : (
-                    <Mic size={32} className="text-white" />
+                    <Mic size={40} className="text-rose-400" />
                   )}
                 </button>
               </div>
 
               {/* 실시간 인식 텍스트 */}
-              <div className="min-h-[48px] flex items-center justify-center px-4">
-                {isListening && (
-                  <p className="text-center text-slate-300 text-sm animate-pulse">
-                    {interimTranscript || '말씀해주세요...'}
-                  </p>
-                )}
-                {!isListening && !isParsing && (
-                  <p className="text-center text-slate-500 text-sm">
-                    {isSupported ? '버튼을 눌러 말씀해주세요' : 'Chrome 브라우저에서 사용 가능합니다'}
-                  </p>
-                )}
-                {isParsing && (
-                  <p className="text-center text-blue-400 text-sm">AI 분석 중...</p>
-                )}
+              <div className="min-h-[60px] flex flex-col items-center justify-center px-4">
+                <div className="bg-white/60 backdrop-blur-sm px-6 py-3 rounded-2xl border border-rose-50 shadow-sm min-w-[200px] text-center">
+                  {isListening && (
+                    <p className="text-rose-600 font-black text-sm">
+                      {interimTranscript || '귀 기울여 듣고 있어요... ✨'}
+                    </p>
+                  )}
+                  {!isListening && !isParsing && (
+                    <p className="text-gray-400 font-bold text-xs leading-relaxed text-center">
+                      {isSupported ? (
+                        <>분홍색 마이크를 누르고<br/>편하게 말씀해주세요!</>
+                      ) : (
+                        '죄송해요, 이 브라우저에서는<br/>음성 인식이 어려워요 😿'
+                      )}
+                    </p>
+                  )}
+                  {isParsing && (
+                    <div className="flex items-center gap-2 justify-center">
+                      <p className="text-rose-400 font-black text-sm animate-pulse text-center">영양 성분 분석 중...</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {error && (
-                <p className="text-red-400 text-sm text-center bg-red-500/10 rounded-xl px-4 py-2">
-                  {error}
-                </p>
+                <div className="bg-rose-50 text-rose-500 text-[10px] font-bold px-4 py-2 rounded-xl border border-rose-100 flex items-center gap-2 animate-shake">
+                  <span>⚠️</span> {error}
+                </div>
               )}
             </div>
 
             {/* 예시 문구 */}
-            <div className="mb-4">
-              <p className="text-xs text-slate-500 mb-2">💬 이렇게 말해보세요</p>
+            <div className="mb-6 bg-gray-50/50 p-4 rounded-3xl border border-gray-50">
+              <p className="text-[10px] font-black text-gray-400 mb-3 ml-1 flex items-center gap-1">
+                <Sparkles size={10} /> 이렇게 말씀해보세요
+              </p>
               <div className="flex flex-wrap gap-2">
-                {['점심에 김치찌개랑 밥 먹었어', '아침에 라면 한 봉지', '저녁 제육볶음 반 인분'].map(ex => (
+                {[
+                  '점심에 제육볶음이랑 밥 먹었어',
+                  '아침으로 사과 반 개랑 요거트 한 컵',
+                  '간식으로 아메리카노 한 잔 했어'
+                ].map(ex => (
                   <button
                     key={ex}
                     onClick={() => { setTextInput(ex); handleVoiceResult(ex); }}
-                    className="text-xs px-3 py-1.5 rounded-full bg-white/5 text-slate-400 hover:bg-blue-500/20 hover:text-blue-300 transition-colors border border-white/5"
+                    className="text-[11px] font-bold px-4 py-2 rounded-2xl bg-white text-gray-500 hover:text-rose-500 hover:bg-rose-50 transition-all border border-gray-100 shadow-sm active:scale-95"
                   >
-                    {ex}
+                    "{ex}"
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* 텍스트 입력 구분선 */}
-            <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-px bg-white/5" />
-              <span className="text-xs text-slate-600">또는 직접 입력</span>
-              <div className="flex-1 h-px bg-white/5" />
-            </div>
-
             {/* 텍스트 입력 */}
-            <div className="flex gap-2">
+            <div className="relative group">
               <input
                 type="text"
                 value={textInput}
                 onChange={e => setTextInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleTextSubmit()}
-                placeholder="예: 김치찌개 + 밥 한 공기"
-                className="input-dark flex-1"
+                placeholder="직접 입력할 수도 있어요!"
+                className="w-full bg-white border-2 border-gray-50 rounded-2xl py-4 px-5 pr-14 text-sm font-bold text-gray-700 outline-none focus:border-rose-200 transition-all shadow-inner"
               />
               <button
                 onClick={handleTextSubmit}
                 disabled={!textInput.trim() || isParsing}
-                className="w-12 h-12 rounded-xl bg-blue-500 hover:bg-blue-600 disabled:opacity-40 flex items-center justify-center transition-colors flex-shrink-0"
+                className="absolute right-2 top-2 w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center disabled:opacity-20 active:scale-90 transition-all shadow-md"
               >
                 <Send size={18} className="text-white" />
               </button>
             </div>
-          </>
+          </div>
         )}
 
         {/* 파싱 결과 확인 */}
         {parseResult && (
           <div className="animate-fade-in">
             {parseResult.needsClarification && (
-              <div className="mb-4 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-                <p className="text-yellow-300 text-sm">🤔 {parseResult.clarificationQuestion}</p>
+              <div className="mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-100 flex gap-3">
+                <span className="text-xl">🧐</span>
+                <p className="text-amber-800 font-bold text-xs leading-relaxed">{parseResult.clarificationQuestion}</p>
               </div>
             )}
 
-            <p className="text-sm text-slate-400 mb-3">인식된 음식</p>
-            <div className="space-y-2 mb-6">
+            <div className="flex items-center justify-between mb-4 px-1">
+              <p className="text-xs font-black text-gray-500">인식된 음식 정보</p>
+              <p className="text-[10px] font-bold text-rose-400">총 {parseResult.parsedFoods.length}개</p>
+            </div>
+            
+            <div className="space-y-3 mb-6">
               {parseResult.parsedFoods.map((food, i) => (
-                <div key={i} className="glass-card p-3 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-white text-sm">{food.name}</p>
-                    <p className="text-xs text-slate-400">
-                      {food.quantity}{food.unit} · {food.calories}kcal · 탄수화물 {food.carbs}g
-                    </p>
+                <div key={i} className="bg-white border border-gray-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-rose-100 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gray-50 font-bold text-sm flex items-center justify-center text-gray-400 group-hover:bg-rose-50 group-hover:text-rose-400 transition-colors">
+                      {i + 1}
+                    </div>
+                    <div>
+                      <p className="font-black text-gray-800 text-sm">{food.name}</p>
+                      <p className="text-[10px] font-bold text-gray-400 mt-0.5">
+                        {food.quantity}{food.unit} · {food.calories}kcal · 탄수 {food.carbs}g
+                      </p>
+                    </div>
                   </div>
-                  <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    (food.glycemicIndex ?? 0) >= 70 ? 'glucotype-red' :
-                    (food.glycemicIndex ?? 0) >= 55 ? 'glucotype-yellow' : 'glucotype-green'
+                  <div className={`px-3 py-1 rounded-full text-[9px] font-black shadow-sm ${
+                    (food.glycemicIndex ?? 0) >= 70 ? 'bg-rose-50 text-rose-500' :
+                    (food.glycemicIndex ?? 0) >= 55 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
                   }`}>
-                    GI {food.glycemicIndex}
+                    지수 {food.glycemicIndex}
                   </div>
                 </div>
               ))}
 
               {parseResult.parsedFoods.length === 0 && (
-                <p className="text-center text-slate-500 py-4">음식을 인식하지 못했습니다</p>
+                <div className="py-12 bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100 flex flex-col items-center gap-2">
+                  <span className="text-4xl">🌵</span>
+                  <p className="text-xs font-bold text-gray-400 text-center">음식을 찾지 못했어요. 다시 말씀해 주실래요?</p>
+                </div>
               )}
-            </div>
-
-            {/* 신뢰도 */}
-            <div className="flex items-center gap-2 mb-6">
-              <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
-                  style={{ width: `${(parseResult.confidenceScore ?? 0) * 100}%` }}
-                />
-              </div>
-              <span className="text-xs text-slate-500">신뢰도 {Math.round((parseResult.confidenceScore ?? 0) * 100)}%</span>
             </div>
 
             <div className="flex gap-3">
               <button
                 onClick={() => setParseResult(null)}
-                className="btn-ghost flex-1"
+                className="flex-[0.4] bg-gray-100 text-gray-500 py-4 px-6 rounded-2xl font-black text-sm active:scale-95 transition-all"
               >
-                다시 입력
+                다시 하기
               </button>
               <button
                 onClick={() => {
@@ -222,9 +243,9 @@ export default function VoiceInputModal({ onClose, onConfirm }: VoiceInputModalP
                   }
                 }}
                 disabled={parseResult.parsedFoods.length === 0}
-                className="btn-primary flex-1 flex items-center justify-center gap-2"
+                className="flex-1 bg-gray-800 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl shadow-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
-                기록하기 <ChevronRight size={16} />
+                기록 완료 <ChevronRight size={18} strokeWidth={3} />
               </button>
             </div>
           </div>

@@ -16,33 +16,37 @@ export default function BottomNavigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="bottom-nav">
-      <div className="flex items-center justify-around h-16">
+    <nav className="bottom-nav bg-[#FFFCF7]/95 border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+      <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
           const isActive = pathname === href || pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
-              className="flex flex-col items-center gap-1 px-5 py-2 transition-all duration-200 group"
+              className="flex flex-col items-center gap-1 px-4 py-2 transition-all duration-300 relative group"
             >
-              <div className={`p-1.5 rounded-xl transition-all duration-200 ${
+              <div className={`p-2 rounded-2xl transition-all duration-300 ${
                 isActive
-                  ? 'bg-blue-500/20'
-                  : 'group-hover:bg-white/5'
+                  ? 'bg-[var(--color-accent-pink)]/10 scale-110'
+                  : 'group-active:bg-gray-100'
               }`}>
                 <Icon
-                  size={22}
-                  className={`transition-colors duration-200 ${
-                    isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-300'
+                  size={24}
+                  strokeWidth={isActive ? 2.5 : 2}
+                  className={`transition-colors duration-300 ${
+                    isActive ? 'text-[var(--color-accent-pink)]' : 'text-gray-300'
                   }`}
                 />
               </div>
-              <span className={`text-[10px] font-medium transition-colors duration-200 ${
-                isActive ? 'text-blue-400' : 'text-slate-600'
+              <span className={`text-[10px] font-bold transition-colors duration-300 ${
+                isActive ? 'text-[var(--color-accent-pink)]' : 'text-gray-300'
               }`}>
                 {label}
               </span>
+              {isActive && (
+                <div className="absolute -top-1 w-1 h-1 rounded-full bg-[var(--color-accent-pink)] shadow-[0_0_8px_var(--color-accent-pink)]" />
+              )}
             </Link>
           );
         })}

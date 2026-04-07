@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, TrendingDown, TrendingUp, Minus, Target, Activity } from 'lucide-react';
+import { Plus, TrendingDown, TrendingUp, Minus, Target, Activity, Heart, Calendar, ChevronRight } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, BarChart, Bar, ComposedChart, Line
@@ -20,33 +20,26 @@ interface TooltipProps {
 function GlucoseTooltip({ active, payload, label }: TooltipProps) {
   if (active && payload && payload.length) {
     const val = payload[0].value;
-    const color = val > 140 ? '#ef4444' : val < 70 ? '#f59e0b' : '#10b981';
+    const color = val > 140 ? 'var(--color-danger)' : val < 70 ? 'var(--color-warning)' : 'var(--color-success)';
     return (
-      <div className="glass-card px-3 py-2 text-xs">
-        <p className="text-slate-400">{label}</p>
-        <p className="font-bold text-sm" style={{ color }}>{val} mg/dL</p>
+      <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-gray-100 shadow-xl">
+        <p className="text-[10px] font-bold text-gray-400 mb-1">{label}</p>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+          <p className="font-black text-sm text-gray-700">{val} <span className="text-[10px] font-bold text-gray-400">mg/dL</span></p>
+        </div>
       </div>
     );
   }
   return null;
 }
 
-const WEEK_DATA = [
-  { day: '월', avg: 118, high: 152, low: 88 },
-  { day: '화', avg: 124, high: 168, low: 92 },
-  { day: '수', avg: 110, high: 139, low: 85 },
-  { day: '목', avg: 128, high: 172, low: 94 },
-  { day: '금', avg: 115, high: 148, low: 89 },
-  { day: '토', avg: 108, high: 135, low: 82 },
-  { day: '일', avg: 121, high: 155, low: 90 },
-];
-
-const MEASUREMENT_TYPES: Record<GlucoseReading['measurementType'], { label: string; order: number }> = {
-  fasting: { label: '공복', order: 0 },
-  postmeal_30m: { label: '식후 30분', order: 1 },
-  postmeal_1h: { label: '식후 1시간', order: 2 },
-  postmeal_2h: { label: '식후 2시간', order: 3 },
-  random: { label: '임의 측정', order: 4 },
+const MEASUREMENT_TYPES: Record<GlucoseReading['measurementType'], { label: string; order: number; emoji: string }> = {
+  fasting: { label: '공복', order: 0, emoji: '🌅' },
+  postmeal_30m: { label: '식후 30분', order: 1, emoji: '🍰' },
+  postmeal_1h: { label: '식후 1시간', order: 2, emoji: '🍚' },
+  postmeal_2h: { label: '식후 2시간', order: 3, emoji: '🚶' },
+  random: { label: '임의 측정', order: 4, emoji: '📍' },
 };
 
 type PeriodType = 'day' | 'week' | 'month';
@@ -57,175 +50,199 @@ export default function GlucosePage() {
   const [newGlucoseValue, setNewGlucoseValue] = useState('');
   const [newMeasType, setNewMeasType] = useState<GlucoseReading['measurementType']>('random');
 
-  const { readings, currentGlucose, averageGlucose, timeInRange, addReading, getChartData } = useGlucoseData('demo');
+  const { readings, loading, currentGlucose, averageGlucose, timeInRange, addReading, getChartData } = useGlucoseData('demo');
   const chartData = getChartData();
   const weeklyAnalysis = analyzeWeeklyTrend(readings);
 
-  const handleAddReading = () => {
+  const handleAddReading = async () => {
     const value = parseInt(newGlucoseValue);
     if (isNaN(value) || value < 20 || value > 600) return;
-    addReading(value, newMeasType);
-    setNewGlucoseValue('');
-    setShowAddModal(false);
+    try {
+      await addReading(value, newMeasType);
+      setNewGlucoseValue('');
+      setShowAddModal(false);
+    } catch (error) {
+      alert('저장에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const TrendIcon = weeklyAnalysis.trend === 'improving' ? TrendingDown :
                     weeklyAnalysis.trend === 'worsening' ? TrendingUp : Minus;
-  const trendColor = weeklyAnalysis.trend === 'improving' ? 'text-emerald-400' :
-                     weeklyAnalysis.trend === 'worsening' ? 'text-red-400' : 'text-slate-400';
+  const trendColor = weeklyAnalysis.trend === 'improving' ? 'text-[var(--color-success)]' :
+                     weeklyAnalysis.trend === 'worsening' ? 'text-[var(--color-danger)]' : 'text-gray-400';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 page-content">
-      <header className="safe-top px-5 pt-4 pb-3 sticky top-0 bg-gray-950/90 backdrop-blur z-10">
+    <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">
+      <header className="safe-top px-5 pt-4 pb-3 sticky top-0 bg-[var(--color-bg-primary)]/90 backdrop-blur z-10 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-white">혈당 추이</h1>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">혈당 리포트</h1>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500 text-white text-sm font-medium active:scale-95 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[var(--color-accent-pink)] text-white text-sm font-black shadow-lg shadow-rose-100 active:scale-95 transition-all"
           >
-            <Plus size={16} /> 혈당 입력
+            <Plus size={18} strokeWidth={3} /> 기록하기
           </button>
         </div>
 
         {/* 기간 탭 */}
-        <div className="flex gap-1 p-1 rounded-xl bg-white/5">
+        <div className="flex gap-1 p-1 rounded-2xl bg-white border border-[var(--color-border)]">
           {(['day', 'week', 'month'] as PeriodType[]).map(p => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                period === p ? 'bg-blue-500 text-white' : 'text-slate-400'
+              className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${
+                period === p ? 'bg-[var(--color-accent-pink)] text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50'
               }`}
             >
-              {p === 'day' ? '오늘' : p === 'week' ? '1주' : '1달'}
+              {p === 'day' ? '오늘 하루' : p === 'week' ? '이번 주' : '이번 달'}
             </button>
           ))}
         </div>
       </header>
 
-      <div className="px-4 space-y-4">
+      <div className="px-4 space-y-5 pt-4">
         {/* 핵심 지표 카드 3개 */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { label: '현재', value: currentGlucose, unit: 'mg/dL', icon: <Activity size={14} />, color: 'text-blue-400' },
-            { label: '평균', value: averageGlucose, unit: 'mg/dL', icon: <Target size={14} />, color: 'text-purple-400' },
-            { label: '목표 범위', value: timeInRange, unit: '%', icon: <TrendIcon size={14} />, color: trendColor },
-          ].map(({ label, value, unit, icon, color }) => (
-            <div key={label} className="glass-card p-3 text-center">
-              <div className={`flex justify-center mb-1 ${color}`}>{icon}</div>
-              <p className={`text-xl font-bold ${color}`}>{value}</p>
-              <p className="text-[10px] text-slate-500">{unit}</p>
-              <p className="text-[10px] text-slate-500">{label}</p>
+            { label: '현재 혈당', value: currentGlucose, unit: 'mg/dL', icon: <Activity size={16} />, color: 'text-rose-500', bg: 'bg-rose-50' },
+            { label: '평균 혈당', value: averageGlucose, unit: 'mg/dL', icon: <Target size={16} />, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+            { label: '목표 범위', value: timeInRange, unit: '%', icon: <Heart size={16} />, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+          ].map(({ label, value, unit, icon, color, bg }) => (
+            <div key={label} className="bg-white rounded-3xl p-4 text-center shadow-sm border border-[var(--color-border)] hover:border-rose-100 transition-colors">
+              <div className={`w-8 h-8 rounded-xl ${bg} ${color} flex items-center justify-center mx-auto mb-2 shadow-inner border border-white`}>
+                {icon}
+              </div>
+              <p className={`text-2xl font-black ${color}`}>{loading ? '-' : value}</p>
+              <p className="text-[10px] font-bold text-gray-400 mt-0.5">{label}</p>
             </div>
           ))}
         </div>
 
         {/* 메인 차트 */}
-        <div className="glass-card p-4">
-          <h2 className="font-semibold text-white text-sm mb-4">
-            {period === 'day' ? '오늘 혈당 변화' : period === 'week' ? '주간 혈당 추이' : '월간 혈당 추이'}
-          </h2>
+        <div className="glass-card p-5 border-none shadow-sm relative overflow-hidden bg-white/50">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-black text-gray-800 text-sm flex items-center gap-2">
+               <span className="w-1.5 h-4 bg-[var(--color-accent-pink)] rounded-full mr-1" />
+              {period === 'day' ? '오늘 하루 흐름' : period === 'week' ? '한 주간의 기록' : '한 달간의 기록'}
+            </h2>
+            <div className="text-[10px] font-bold text-gray-400 bg-white px-2 py-1 rounded-lg border border-gray-50 flex items-center gap-1">
+              <Calendar size={10} /> mg/dL
+            </div>
+          </div>
 
-          {period === 'day' && (
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
+          {loading ? (
+            <div className="h-[200px] skeleton rounded-3xl" />
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -25 }}>
                 <defs>
-                  <linearGradient id="gGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                  {/* 위험 구간 오버레이 */}
-                  <linearGradient id="dangerGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.08} />
-                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+                  <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-accent-pink)" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="var(--color-accent-pink)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="time" tick={{ fill: '#475569', fontSize: 9 }} tickLine={false} axisLine={false} />
-                <YAxis domain={[50, 220]} tick={{ fill: '#475569', fontSize: 9 }} tickLine={false} axisLine={false} />
-                <ReferenceLine y={140} stroke="rgba(239,68,68,0.4)" strokeDasharray="4 4" label={{ value: '상한', fill: '#ef4444', fontSize: 9, position: 'right' }} />
-                <ReferenceLine y={70} stroke="rgba(245,158,11,0.4)" strokeDasharray="4 4" label={{ value: '하한', fill: '#f59e0b', fontSize: 9, position: 'right' }} />
+                <CartesianGrid strokeDasharray="6 6" stroke="#f1f1f1" vertical={false} />
+                <XAxis 
+                  dataKey="time" 
+                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  dy={10}
+                />
+                <YAxis 
+                  domain={[50, 200]} 
+                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} 
+                  tickLine={false} 
+                  axisLine={false} 
+                />
+                <ReferenceLine 
+                  y={140} 
+                  stroke="#fda4af" 
+                  strokeWidth={1} 
+                  strokeDasharray="4 4" 
+                />
+                <ReferenceLine 
+                  y={70} 
+                  stroke="#ca8a04" 
+                  strokeWidth={1} 
+                  strokeDasharray="4 4" 
+                />
                 <Tooltip content={<GlucoseTooltip />} />
-                <Area type="monotone" dataKey="glucose" stroke="#3b82f6" strokeWidth={2.5}
-                  fill="url(#gGrad)" dot={{ r: 4, fill: '#3b82f6', stroke: '#1e3a5f', strokeWidth: 2 }}
-                  activeDot={{ r: 6, fill: '#60a5fa' }} />
+                <Area 
+                  type="monotone" 
+                  dataKey="glucose" 
+                  stroke="var(--color-accent-pink)" 
+                  strokeWidth={4}
+                  fill="url(#areaGrad)" 
+                  dot={{ r: 5, fill: 'white', stroke: 'var(--color-accent-pink)', strokeWidth: 3 }}
+                  activeDot={{ r: 8, fill: 'var(--color-accent-pink)', stroke: 'white', strokeWidth: 3 }} 
+                  animationDuration={1500}
+                />
               </AreaChart>
             </ResponsiveContainer>
           )}
 
-          {period === 'week' && (
-            <ResponsiveContainer width="100%" height={200}>
-              <ComposedChart data={WEEK_DATA} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="day" tick={{ fill: '#475569', fontSize: 10 }} tickLine={false} axisLine={false} />
-                <YAxis domain={[50, 220]} tick={{ fill: '#475569', fontSize: 9 }} tickLine={false} axisLine={false} />
-                <ReferenceLine y={140} stroke="rgba(239,68,68,0.3)" strokeDasharray="4 4" />
-                <ReferenceLine y={70} stroke="rgba(245,158,11,0.3)" strokeDasharray="4 4" />
-                <Tooltip />
-                <Bar dataKey="high" fill="rgba(239,68,68,0.2)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="low" fill="rgba(245,158,11,0.15)" radius={[4, 4, 0, 0]} />
-                <Line type="monotone" dataKey="avg" stroke="#3b82f6" strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#3b82f6' }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          )}
-
-          {/* 범례 */}
-          <div className="flex items-center justify-center gap-4 mt-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-blue-500" />
-              <span className="text-xs text-slate-500">{period === 'week' ? '평균' : '혈당'}</span>
+          {/* 가이드라인 설명 */}
+          <div className="flex items-center justify-center gap-6 mt-6 p-3 bg-gray-50/50 rounded-2xl border border-gray-50">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-accent-pink)] shadow-sm" />
+              <span className="text-[10px] font-bold text-gray-500">정상 범위</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-px bg-red-500" />
-              <span className="text-xs text-slate-500">상한 140</span>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-px border-t-2 border-dashed border-rose-300" />
+              <span className="text-[10px] font-bold text-gray-500">목표 상한 (140)</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-px bg-yellow-500" />
-              <span className="text-xs text-slate-500">하한 70</span>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-px border-t-2 border-dashed border-yellow-300" />
+              <span className="text-[10px] font-bold text-gray-500">목표 하한 (70)</span>
             </div>
           </div>
         </div>
 
-        {/* 통계 요약 */}
-        <div className="glass-card p-4">
-          <h2 className="font-semibold text-white text-sm mb-3">측정 통계</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: '최고 혈당', value: weeklyAnalysis.highestGlucose, unit: 'mg/dL', color: 'text-red-400' },
-              { label: '최저 혈당', value: weeklyAnalysis.lowestGlucose, unit: 'mg/dL', color: 'text-yellow-400' },
-              { label: '스파이크 횟수', value: weeklyAnalysis.spikeCount, unit: '회 (>180)', color: 'text-orange-400' },
-              { label: '목표 범위', value: `${timeInRange}%`, unit: 'TIR', color: 'text-emerald-400' },
-            ].map(({ label, value, unit, color }) => (
-              <div key={label} className="bg-white/3 rounded-xl p-3">
-                <p className={`text-xl font-bold ${color}`}>{value}</p>
-                <p className="text-xs text-slate-500">{unit}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+        {/* 측정 기록 목록 */}
+        <div className="pb-4">
+          <div className="flex items-center justify-between mb-4 px-1">
+            <h2 className="font-black text-gray-800 text-sm flex items-center gap-2">
+               <span className="w-1.5 h-4 bg-indigo-400 rounded-full mr-1" />
+              최근 혈당 기록
+            </h2>
+            <button className="text-[10px] font-bold text-[var(--color-accent-pink)]">전체보기</button>
+          </div>
+          
+          <div className="space-y-3">
+            {loading ? (
+              <div className="h-16 skeleton rounded-3xl" />
+            ) : readings.length === 0 ? (
+              <div className="py-12 bg-white/40 rounded-[32px] border-2 border-dashed border-gray-100 flex flex-col items-center gap-2">
+                <span className="text-4xl">💧</span>
+                <p className="text-xs font-bold text-gray-400">아직 입력된 기록이 없어요!</p>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 최근 측정 기록 */}
-        <div>
-          <h2 className="font-semibold text-white text-sm mb-3">최근 측정 기록</h2>
-          <div className="space-y-2">
-            {readings.slice(-6).reverse().map(reading => {
+            ) : readings.slice().reverse().slice(0, 5).map(reading => {
               const isHigh = reading.value > 140;
               const isLow = reading.value < 70;
-              const color = isHigh ? 'text-red-400 glucotype-red' : isLow ? 'text-yellow-400 glucotype-yellow' : 'text-emerald-400 glucotype-green';
+              const type = MEASUREMENT_TYPES[reading.measurementType];
+              
               return (
-                <div key={reading.id} className="glass-card p-3 flex items-center gap-3">
-                  <div className={`px-2 py-0.5 rounded-full text-xs font-bold ${color}`}>
-                    {reading.value}
+                <div key={reading.id} className="bg-white rounded-3xl p-4 shadow-sm border border-[var(--color-border)] flex items-center gap-4 group hover:border-indigo-100 transition-colors">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner border border-white ${
+                    isHigh ? 'bg-rose-50 text-rose-500' : isLow ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
+                  }`}>
+                    {type.emoji}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-white">{MEASUREMENT_TYPES[reading.measurementType].label}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-black text-gray-800">{type.label}</p>
+                    <p className="text-[10px] font-bold text-gray-400 mt-0.5">
                       {reading.timestamp.toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
-                  <span className="text-xs text-slate-600">mg/dL</span>
+                  <div className="text-right">
+                    <p className={`text-xl font-black ${
+                      isHigh ? 'text-[var(--color-danger)]' : isLow ? 'text-[var(--color-warning)]' : 'text-[var(--color-success)]'
+                    }`}>
+                      {reading.value}
+                    </p>
+                    <p className="text-[9px] font-black text-gray-300">mg/dL</p>
+                  </div>
                 </div>
               );
             })}
@@ -236,51 +253,66 @@ export default function GlucosePage() {
       {/* 혈당 입력 모달 */}
       {showAddModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowAddModal(false)}>
-          <div className="modal-sheet">
-            <h2 className="text-xl font-bold text-white mb-6">혈당 수동 입력</h2>
-
-            <div className="mb-4">
-              <label className="text-sm text-slate-400 mb-2 block">혈당 수치 (mg/dL)</label>
-              <input
-                type="number"
-                value={newGlucoseValue}
-                onChange={e => setNewGlucoseValue(e.target.value)}
-                placeholder="예: 126"
-                className="input-dark text-2xl text-center font-bold"
-                min={20} max={600}
-                autoFocus
-              />
+          <div className="modal-sheet bg-[#FFFCF7] border-none shadow-2xl rounded-[40px] p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-2xl shadow-sm border border-white">
+                🩸
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-gray-800">혈당 기록하기</h2>
+                <p className="text-xs font-bold text-gray-400 mt-0.5">꼼꼼하게 챙기는 당신이 아름다워요</p>
+              </div>
             </div>
 
-            <div className="mb-6">
-              <label className="text-sm text-slate-400 mb-2 block">측정 시점</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(Object.entries(MEASUREMENT_TYPES) as Array<[GlucoseReading['measurementType'], { label: string; order: number }]>)
+            <div className="mb-8">
+              <div className="relative group">
+                <input
+                  type="number"
+                  value={newGlucoseValue}
+                  onChange={e => setNewGlucoseValue(e.target.value)}
+                  placeholder="000"
+                  className="w-full bg-white border-2 border-indigo-50 rounded-3xl py-6 px-5 text-4xl text-center font-black text-gray-800 outline-none focus:border-indigo-200 transition-all shadow-inner"
+                  min={20} max={600}
+                  autoFocus
+                />
+                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-gray-300">mg/dL</span>
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <p className="text-xs font-black text-gray-400 mb-4 ml-1">지금은 어떤 시점인가요?</p>
+              <div className="grid grid-cols-2 gap-3">
+                {(Object.entries(MEASUREMENT_TYPES) as Array<[GlucoseReading['measurementType'], { label: string; order: number; emoji: string }]>)
                   .sort((a, b) => a[1].order - b[1].order)
-                  .map(([key, { label }]) => (
+                  .map(([key, { label, emoji }]) => (
                     <button
                       key={key}
                       onClick={() => setNewMeasType(key)}
-                      className={`py-2.5 px-3 rounded-xl text-sm font-medium transition-all ${
+                      className={`py-4 px-3 rounded-2xl text-xs font-black transition-all border shadow-sm flex items-center justify-center gap-2 ${
                         newMeasType === key
-                          ? 'bg-blue-500 text-white'
-                          : 'glass-card text-slate-400 hover:text-slate-200'
+                          ? 'bg-gray-800 text-white border-gray-800'
+                          : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-100'
                       }`}
                     >
-                      {label}
+                      <span className="text-sm">{emoji}</span> {label}
                     </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <button onClick={() => setShowAddModal(false)} className="btn-ghost flex-1">취소</button>
+            <div className="flex gap-3 mt-4">
+              <button 
+                onClick={() => setShowAddModal(false)} 
+                className="flex-[0.4] bg-gray-100 text-gray-500 py-4 px-6 rounded-2xl font-black text-sm active:scale-95 transition-all"
+              >
+                취소
+              </button>
               <button
                 onClick={handleAddReading}
-                disabled={!newGlucoseValue}
-                className="btn-primary flex-1"
+                disabled={!newGlucoseValue || loading}
+                className="flex-1 bg-gray-800 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl shadow-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-20"
               >
-                저장
+                기록 완료 <ChevronRight size={18} strokeWidth={3} />
               </button>
             </div>
           </div>

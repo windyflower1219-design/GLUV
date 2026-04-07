@@ -6,23 +6,24 @@
    CSS Variables (Design Tokens)
    ============================== */
 :root {
-  --color-bg-primary: #0a0f1e;
-  --color-bg-secondary: #111827;
-  --color-bg-card: #1a2235;
-  --color-accent-blue: #3b82f6;
-  --color-accent-purple: #8b5cf6;
-  --color-accent-teal: #14b8a6;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #94a3b8;
-  --color-border: rgba(255,255,255,0.08);
+  --color-bg-primary: #FFF9F2;
+  --color-bg-secondary: #FFF3E6;
+  --color-bg-card: #FFFFFF;
+  --color-accent-blue: #70A1FF;
+  --color-accent-purple: #A29BFE;
+  --color-accent-pink: #FF9FAD;
+  --color-accent-teal: #1ABC9C;
+  --color-success: #2ECC71;
+  --color-warning: #F1C40F;
+  --color-danger: #E74C3C;
+  --color-text-primary: #2D3436;
+  --color-text-secondary: #636E72;
+  --color-border: rgba(0,0,0,0.08);
   --radius-lg: 1.25rem;
   --radius-xl: 1.75rem;
-  --shadow-glow-blue: 0 0 30px rgba(59,130,246,0.3);
-  --shadow-glow-green: 0 0 30px rgba(16,185,129,0.3);
-  --shadow-glow-red: 0 0 30px rgba(239,68,68,0.3);
+  --shadow-glow-blue: 0 10px 30px rgba(112, 161, 255, 0.2);
+  --shadow-glow-green: 0 10px 30px rgba(46, 204, 113, 0.2);
+  --shadow-glow-red: 0 10px 30px rgba(231, 76, 60, 0.2);
 }
 
 /* ==============================
@@ -39,6 +40,7 @@ html {
 
 body {
   background: var(--color-bg-primary);
+  color: var(--color-text-primary);
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
@@ -54,7 +56,7 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.1);
   border-radius: 2px;
 }
 
@@ -62,20 +64,22 @@ body {
    Glass Morphism Components
    ============================== */
 .glass-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: var(--radius-xl);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.05);
 }
 
 .glass-card-hover {
   transition: all 0.3s ease;
 }
 .glass-card-hover:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.8);
   transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(31, 38, 135, 0.08);
 }
 
 /* ==============================

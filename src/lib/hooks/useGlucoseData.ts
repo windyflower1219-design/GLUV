@@ -1,71 +1,59 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { GlucoseReading, WeeklyTrend, GlucoseChartData } from '@/types';
+import { saveGlucose, getGlucoseReadings } from '@/lib/firebase/firestore';
+import type { GlucoseReading, GlucoseChartData } from '@/types';
 
-// 데모 데이터 생성 (Firebase 연동 전 테스트용)
-function generateDemoReadings(): GlucoseReading[] {
-  const readings: GlucoseReading[] = [];
-  const now = new Date();
-
-  const demoData = [
-    { hoursAgo: 14, value: 95, type: 'fasting' as const },
-    { hoursAgo: 12, value: 145, type: 'postmeal_1h' as const },
-    { hoursAgo: 10, value: 118, type: 'postmeal_2h' as const },
-    { hoursAgo: 6, value: 102, type: 'fasting' as const },
-    { hoursAgo: 5, value: 168, type: 'postmeal_30m' as const },
-    { hoursAgo: 4, value: 152, type: 'postmeal_1h' as const },
-    { hoursAgo: 2, value: 125, type: 'postmeal_2h' as const },
-    { hoursAgo: 0.5, value: 98, type: 'random' as const },
-  ];
-
-  demoData.forEach((d, i) => {
-    const timestamp = new Date(now.getTime() - d.hoursAgo * 3600000);
-    readings.push({
-      id: `demo_${i}`,
-      userId: 'demo_user',
-      timestamp,
-      value: d.value,
-      measurementType: d.type,
-    });
-  });
-
-  return readings;
-}
-
-export function useGlucoseData(userId?: string) {
+export function useGlucoseData(userId: string = 'demo') {
   const [readings, setReadings] = useState<GlucoseReading[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentGlucose, setCurrentGlucose] = useState<number>(0);
 
-  useEffect(() => {
-    // 데모 데이터 로드 (Firebase 연동 전)
-    const timer = setTimeout(() => {
-      const demoReadings = generateDemoReadings();
-      setReadings(demoReadings);
-      setCurrentGlucose(demoReadings[demoReadings.length - 1]?.value ?? 0);
+  const fetchReadings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getGlucoseReadings(userId, 72); // 최신 72시간 데이터 로드
+      setReadings(data);
+      if (data.length > 0) {
+        setCurrentGlucose(data[data.length - 1].value);
+      }
+    } catch (error) {
+      console.error('Failed to fetch glucose readings:', error);
+    } finally {
       setLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timer);
+    }
   }, [userId]);
 
-  const addReading = useCallback((value: number, type: GlucoseReading['measurementType'], linkedMealId?: string) => {
-    const newReading: GlucoseReading = {
-      id: `reading_${Date.now()}`,
-      userId: userId ?? 'demo_user',
+  useEffect(() => {
+    fetchReadings();
+  }, [fetchReadings]);
+
+  const addReading = useCallback(async (value: number, type: GlucoseReading['measurementType'], linkedMealId?: string) => {
+    const readingData: Omit<GlucoseReading, 'id'> = {
+      userId,
       timestamp: new Date(),
       value,
       measurementType: type,
       linkedMealId,
     };
-    setReadings(prev => [...prev, newReading]);
-    setCurrentGlucose(value);
-    return newReading;
-  }, [userId]);
+    
+    try {
+      await saveGlucose(readingData);
+      await fetchReadings(); // 데이터 새로고침
+      return true;
+    } catch (error) {
+      console.error('Error adding glucose reading:', error);
+      throw error;
+    }
+  }, [userId, fetchReadings]);
 
   const getChartData = useCallback((): GlucoseChartData[] => {
+    // 최근 24시간 데이터만 차트에 표시
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - 24);
+    
     return readings
+      .filter(r => r.timestamp >= cutoff)
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
       .map(r => ({
         time: r.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
@@ -92,5 +80,6 @@ export function useGlucoseData(userId?: string) {
     timeInRange,
     addReading,
     getChartData,
+    fetchReadings,
   };
 }
