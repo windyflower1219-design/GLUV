@@ -1,3 +1,5 @@
+'use client';
+
 import { useCallback } from 'react';
 import { saveMeal, saveGlucose } from '@/lib/firebase/firestore';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
