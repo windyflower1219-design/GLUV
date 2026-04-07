@@ -50,7 +50,7 @@ export default function GlucosePage() {
   const [newGlucoseValue, setNewGlucoseValue] = useState('');
   const [newMeasType, setNewMeasType] = useState<GlucoseReading['measurementType']>('random');
 
-  const { readings, loading, currentGlucose, averageGlucose, timeInRange, addReading, getChartData } = useGlucoseData('demo');
+  const { readings, loading, isSubmitting, currentGlucose, averageGlucose, timeInRange, addReading, getChartData } = useGlucoseData('demo');
   const chartData = getChartData();
   const weeklyAnalysis = analyzeWeeklyTrend(readings);
 
@@ -61,8 +61,12 @@ export default function GlucosePage() {
       await addReading(value, newMeasType);
       setNewGlucoseValue('');
       setShowAddModal(false);
-    } catch (error) {
-      alert('저장에 실패했습니다. 다시 시도해주세요.');
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        alert('저장에 실패했습니다. Firebase 콘솔에서 Firestore 규칙(Rules)을 "테스트 모드"로 설정했는지 확인해주세요.');
+      } else {
+        alert('저장에 실패했습니다. Vercel 환경 변수가 모두 정확히 입력되었는지 확인해주세요.');
+      }
     }
   };
 
@@ -309,10 +313,14 @@ export default function GlucosePage() {
               </button>
               <button
                 onClick={handleAddReading}
-                disabled={!newGlucoseValue || loading}
+                disabled={!newGlucoseValue || isSubmitting}
                 className="flex-1 bg-gray-800 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl shadow-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-20"
               >
-                기록 완료 <ChevronRight size={18} strokeWidth={3} />
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">저장 중... <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /></span>
+                ) : (
+                  <>기록 완료 <ChevronRight size={18} strokeWidth={3} /></>
+                )}
               </button>
             </div>
           </div>

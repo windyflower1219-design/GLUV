@@ -9,9 +9,10 @@ import type { FoodItem, VoiceParseResult } from '@/types';
 interface VoiceInputModalProps {
   onClose: () => void;
   onConfirm: (foods: Partial<FoodItem>[], rawText: string) => void;
+  isSubmitting?: boolean;
 }
 
-export default function VoiceInputModal({ onClose, onConfirm }: VoiceInputModalProps) {
+export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = false }: VoiceInputModalProps) {
   const [parseResult, setParseResult] = useState<VoiceParseResult | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [textInput, setTextInput] = useState('');
@@ -239,13 +240,16 @@ export default function VoiceInputModal({ onClose, onConfirm }: VoiceInputModalP
                 onClick={() => {
                   if (parseResult.parsedFoods.length > 0) {
                     onConfirm(parseResult.parsedFoods, parseResult.rawText);
-                    onClose();
                   }
                 }}
-                disabled={parseResult.parsedFoods.length === 0}
+                disabled={parseResult.parsedFoods.length === 0 || isSubmitting}
                 className="flex-1 bg-gray-800 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl shadow-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
-                기록 완료 <ChevronRight size={18} strokeWidth={3} />
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">저장 중... <Loader2 size={18} className="animate-spin" /></span>
+                ) : (
+                  <>기록 완료 <ChevronRight size={18} strokeWidth={3} /></>
+                )}
               </button>
             </div>
           </div>

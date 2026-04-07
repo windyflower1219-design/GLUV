@@ -6,13 +6,14 @@ import type { GlucoseReading, GlucoseChartData } from '@/types';
 
 export function useGlucoseData(userId: string = 'demo') {
   const [readings, setReadings] = useState<GlucoseReading[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentGlucose, setCurrentGlucose] = useState<number>(0);
 
-  const fetchReadings = useCallback(async () => {
-    setLoading(true);
+  const fetchReadings = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsInitialLoading(true);
     try {
-      const data = await getGlucoseReadings(userId, 72); // 최신 72시간 데이터 로드
+      const data = await getGlucoseReadings(userId, 72);
       setReadings(data);
       if (data.length > 0) {
         setCurrentGlucose(data[data.length - 1].value);
@@ -20,7 +21,7 @@ export function useGlucoseData(userId: string = 'demo') {
     } catch (error) {
       console.error('Failed to fetch glucose readings:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) setIsInitialLoading(false);
     }
   }, [userId]);
 
@@ -29,6 +30,7 @@ export function useGlucoseData(userId: string = 'demo') {
   }, [fetchReadings]);
 
   const addReading = useCallback(async (value: number, type: GlucoseReading['measurementType'], linkedMealId?: string) => {
+    setIsSubmitting(true);
     const readingData: Omit<GlucoseReading, 'id'> = {
       userId,
       timestamp: new Date(),
@@ -38,17 +40,22 @@ export function useGlucoseData(userId: string = 'demo') {
     };
     
     try {
-      await saveGlucose(readingData);
-      await fetchReadings(); // 데이터 새로고침
+      console.log('Attempting to save glucose reading to Firebase...', readingData);
+      const docId = await saveGlucose(readingData);
+      console.log('Successfully saved to Firebase with ID:', docId);
+      await fetchReadings(false); // 배경에서 데이터 새로고침 (로딩 바 표시 없이)
       return true;
-    } catch (error) {
-      console.error('Error adding glucose reading:', error);
+    } catch (error: any) {
+      console.error('Detailed Error adding glucose reading:', error);
+      // Firebase 에러 코드 확인용 로그
+      if (error.code) console.error('Firebase Error Code:', error.code);
       throw error;
+    } finally {
+      setIsSubmitting(false);
     }
   }, [userId, fetchReadings]);
 
   const getChartData = useCallback((): GlucoseChartData[] => {
-    // 최근 24시간 데이터만 차트에 표시
     const cutoff = new Date();
     cutoff.setHours(cutoff.getHours() - 24);
     
@@ -74,7 +81,8 @@ export function useGlucoseData(userId: string = 'demo') {
 
   return {
     readings,
-    loading,
+    loading: isInitialLoading, // 기존 호환성을 위해 loading 이름 유지
+    isSubmitting,
     currentGlucose,
     averageGlucose,
     timeInRange,

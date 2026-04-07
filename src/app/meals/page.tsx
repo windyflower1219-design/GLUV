@@ -25,20 +25,21 @@ function getMealType(): MealType {
 
 export default function MealsPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
 
-  const fetchMeals = useCallback(async () => {
-    setLoading(true);
+  const fetchMeals = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsInitialLoading(true);
     try {
       const data = await getMeals('demo', selectedDate);
       setMeals(data);
     } catch (error) {
       console.error('Failed to fetch meals:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) setIsInitialLoading(false);
     }
   }, [selectedDate]);
 
@@ -61,12 +62,22 @@ export default function MealsPage() {
       glucotypeScore: prediction.riskLevel,
     };
 
+    setIsSubmitting(true);
     try {
+      console.log('Attempting to save meal to Firebase...', mealData);
       await saveMeal(mealData);
-      fetchMeals();
+      console.log('Successfully saved meal to Firebase');
+      await fetchMeals(false); // 배경에서 새로고침
       setShowModal(false);
-    } catch (error) {
-      alert('기록 저장에 실패했습니다. 다시 시도해주세요.');
+    } catch (error: any) {
+      console.error('Detailed Error saving meal:', error);
+      if (error.code === 'permission-denied') {
+        alert('저장에 실패했습니다. Firebase 콘솔에서 Firestore 규칙(Rules)을 "테스트 모드"로 설정했는지 확인해주세요.');
+      } else {
+        alert('저장에 실패했습니다. Vercel 환경 변수가 모두 정확히 입력되었는지 확인해주세요.');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   }, [fetchMeals]);
 
@@ -204,7 +215,7 @@ export default function MealsPage() {
                   )}
                 </div>
 
-                {loading ? (
+                {isInitialLoading ? (
                   <div className="h-20 skeleton rounded-3xl" />
                 ) : typeMeals.length === 0 ? (
                   <div
@@ -298,7 +309,11 @@ export default function MealsPage() {
       </button>
 
       {showModal && (
-        <VoiceInputModal onClose={() => setShowModal(false)} onConfirm={handleConfirm} />
+        <VoiceInputModal 
+          onClose={() => setShowModal(false)} 
+          onConfirm={handleConfirm} 
+          isSubmitting={isSubmitting}
+        />
       )}
 
       <BottomNavigation />
