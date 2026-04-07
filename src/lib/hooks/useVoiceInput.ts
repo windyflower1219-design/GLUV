@@ -21,9 +21,36 @@ export function useVoiceInput(
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const onResultRef = useRef(onResult);
+  const transcriptRef = useRef('');
+  const interimTranscriptRef = useRef('');
+  const isStoppedManuallyRef = useRef(false);
+
+  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
+  useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
+  useEffect(() => { interimTranscriptRef.current = interimTranscript; }, [interimTranscript]);
+
   const isSupported = typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+
+  const stopListening = useCallback(() => {
+    isStoppedManuallyRef.current = true;
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    
+    const finalFullText = (transcriptRef.current + ' ' + interimTranscriptRef.current).trim();
+    if (finalFullText) {
+      setState('processing');
+      onResultRef.current?.(finalFullText);
+    } else {
+      setState('idle');
+    }
+    setInterimTranscript('');
+  }, []);
 
   const initRecognition = useCallback(() => {
     if (!isSupported) return null;
@@ -43,6 +70,7 @@ export function useVoiceInput(
     recognition.onstart = () => {
       setState('listening');
       setError(null);
+      isStoppedManuallyRef.current = false;
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -81,14 +109,21 @@ export function useVoiceInput(
 
     recognition.onend = () => {
       setInterimTranscript('');
-      // 연속 인식이지만 브라우저가 끊었을 경우를 대비해 상태만 체크
-      if (state === 'listening') {
-        // 이미 결과는 transcript에 쌓여있음
+      
+      // 만약 사용자가 직접 중지(stopListening)한 게 아니라 브라우저/시스템에 의해 끝났다면
+      if (!isStoppedManuallyRef.current) {
+        const finalFullText = (transcriptRef.current + ' ' + interimTranscriptRef.current).trim();
+        if (finalFullText) {
+          setState('processing');
+          onResultRef.current?.(finalFullText);
+        } else {
+          setState('idle');
+        }
       }
     };
 
     return recognition;
-  }, [isSupported, onResult, state]);
+  }, [isSupported]);
 
   const startListening = useCallback(() => {
     if (!isSupported) {
@@ -107,7 +142,10 @@ export function useVoiceInput(
     recognitionRef.current = recognition;
     setTranscript('');
     setInterimTranscript('');
+    transcriptRef.current = '';
+    interimTranscriptRef.current = '';
     setError(null);
+    isStoppedManuallyRef.current = false;
 
     try {
       recognition.start();
@@ -117,31 +155,18 @@ export function useVoiceInput(
     }
   }, [isSupported, initRecognition]);
 
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
-    
-    if (transcript.trim() || interimTranscript.trim()) {
-      const finalFullText = (transcript + ' ' + interimTranscript).trim();
-      setState('processing');
-      onResult?.(finalFullText);
-    } else {
-      setState('idle');
-    }
-    setInterimTranscript('');
-  }, [transcript, interimTranscript, onResult]);
-
   const resetTranscript = useCallback(() => {
     setTranscript('');
     setInterimTranscript('');
+    transcriptRef.current = '';
+    interimTranscriptRef.current = '';
     setError(null);
     setState('idle');
   }, []);
 
   useEffect(() => {
     return () => {
+      isStoppedManuallyRef.current = true;
       recognitionRef.current?.stop();
     };
   }, []);

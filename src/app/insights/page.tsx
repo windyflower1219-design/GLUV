@@ -102,7 +102,7 @@ export default function InsightsPage() {
       <header className="safe-top px-6 pt-6 pb-3 sticky top-0 bg-[var(--color-bg-primary)]/90 backdrop-blur z-10">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-black text-gray-800 tracking-tight">여보를 위한 조언</h1>
+            <h1 className="text-xl font-black text-gray-800 tracking-tight">당신을 위한 조언</h1>
             {unreadCount > 0 && (
               <p className="text-xs font-bold text-rose-500 mt-0.5">{unreadCount}개의 새로운 소식이 있어요!</p>
             )}
