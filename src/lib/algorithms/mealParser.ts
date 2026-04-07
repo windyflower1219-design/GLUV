@@ -1,5 +1,9 @@
 // 음식 NLP 파서 (로컬 + Gemini API 하이브리드)
-import type { FoodItem, VoiceParseResult } from '@/types';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { FoodItem, VoiceParseResult, MeasurementType } from '@/types';
+
+// API 키 설정
+const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
 
 // 한국 음식 영양 데이터베이스 (로컬 캐시)
 const KOREAN_FOOD_DB: Record<string, Omit<FoodItem, 'id' | 'quantity'>> = {
@@ -83,77 +87,73 @@ function findFoodInText(text: string): Array<{ foodKey: string; position: number
 // ======================================================
 export async function parseMealText(
   voiceText: string,
-  userPreferences?: Record<string, { quantity: number; unit: string }>
 ): Promise<VoiceParseResult> {
-  const normalizedText = voiceText
-    .replace(/[.,!?]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  const foundFoods = findFoodInText(normalizedText);
+    const prompt = `
+      사용자의 음성 입력에서 음식 정보와 혈당 수치를 추출해줘.
+      입력: "${voiceText}"
 
-  if (foundFoods.length === 0) {
+      다음 JSON 형식으로만 응답해:
+      {
+        "parsedFoods": [
+          {
+            "name": "음식명",
+            "quantity": 수량(숫자),
+            "unit": "단위",
+            "carbs": 탄수화물(g),
+            "calories": 칼로리(kcal),
+            "glycemicIndex": 혈당지수(0-100),
+            "protein": 단백질(g),
+            "fat": 지방(g),
+            "sodium": 나트륨(mg)
+          }
+        ],
+        "glucoseValue": 혈당수치(숫자, 없으면 null),
+        "detectedMeasType": "fasting" | "postmeal_30m" | "postmeal_1h" | "postmeal_2h" | "random",
+        "needsClarification": 모호한 경우 true,
+        "clarificationQuestion": "모호한 경우 사용자에게 던질 친절한 질문"
+      }
+
+      지침:
+      1. 한국 음식 영양 정보를 바탕으로 최대한 정확한 수치를 넣어줘. 
+      2. 수량이나 단위가 없으면 1인분을 기준으로 해.
+      3. "혈당 120"과 같은 패턴이 있으면 glucoseValue에 숫자를 넣어.
+      4. 문맥상 "공복", "식후 1시간" 등이 있으면 detectedMeasType을 정해줘. 없으면 "random".
+      5. 아내분을 대하듯 따뜻하고 부드러운 말투로 질문을 생성해줘.
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // JSON 추출 (Markdown backticks 제거)
+    const jsonStr = text.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(jsonStr);
+
+    return {
+      rawText: voiceText,
+      parsedFoods: data.parsedFoods.map((f: any) => ({
+        ...f,
+        id: `food_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      })),
+      glucoseValue: data.glucoseValue || undefined,
+      detectedMeasType: data.detectedMeasType as MeasurementType,
+      confidenceScore: 0.9,
+      needsClarification: !!data.needsClarification,
+      clarificationQuestion: data.clarificationQuestion,
+    };
+  } catch (error) {
+    console.error('Gemini Parsing Error:', error);
     return {
       rawText: voiceText,
       parsedFoods: [],
       confidenceScore: 0,
       needsClarification: true,
-      clarificationQuestion: '어떤 음식을 드셨나요? 좀 더 자세히 말씀해주세요. (예: "김치찌개랑 밥 한 공기")',
+      clarificationQuestion: '죄송해요, 분석 중에 작은 실수가 있었어요. 다시 한 번 말씀해 주실래요?',
     };
   }
-
-  const parsedFoods: Partial<FoodItem>[] = foundFoods.map(({ foodKey }) => {
-    const dbItem = KOREAN_FOOD_DB[foodKey];
-    const surroundingText = normalizedText.substring(
-      Math.max(0, normalizedText.indexOf(foodKey) - 10),
-      normalizedText.indexOf(foodKey) + foodKey.length + 15
-    );
-
-    // 사용자 선호도가 있으면 적용
-    const preference = userPreferences?.[foodKey];
-    const { quantity, unit } = preference ?? extractQuantity(surroundingText);
-
-    return {
-      id: `food_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      name: foodKey,
-      quantity,
-      unit,
-      carbs: dbItem.carbs,
-      calories: dbItem.calories,
-      glycemicIndex: dbItem.glycemicIndex,
-      protein: dbItem.protein,
-      fat: dbItem.fat,
-      sodium: dbItem.sodium,
-    };
-  });
-
-  // 모호한 표현 체크 (라면이지만 종류 불명 등)
-  const ambiguousPatterns = ['라면', '치킨', '피자'];
-  const hasAmbiguity = foundFoods.some(f => ambiguousPatterns.includes(f.foodKey));
-
-  const needsClarification = hasAmbiguity && !normalizedText.includes('신라면') && !normalizedText.includes('짜파게티');
-  const clarificationQuestion = needsClarification
-    ? generateClarificationQuestion(foundFoods.map(f => f.foodKey))
-    : undefined;
-
-  return {
-    rawText: voiceText,
-    parsedFoods,
-    confidenceScore: foundFoods.length > 0 ? 0.85 : 0.3,
-    needsClarification,
-    clarificationQuestion,
-  };
-}
-
-function generateClarificationQuestion(foodNames: string[]): string {
-  const ambiguous = foodNames.find(n => ['라면', '치킨', '피자'].includes(n));
-  if (ambiguous === '라면') {
-    return '어떤 라면인가요? (예: 신라면, 짜파게티) 국물까지 다 드셨나요?';
-  }
-  if (ambiguous === '치킨') {
-    return '치킨 몇 조각 드셨나요? 후라이드인가요, 양념인가요?';
-  }
-  return `${ambiguous} 더 자세히 말씀해주시겠어요?`;
 }
 
 export type { VoiceParseResult };

@@ -9,7 +9,10 @@ import {
 import BottomNavigation from '@/components/BottomNavigation';
 import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
 import { analyzeWeeklyTrend } from '@/lib/algorithms/glucoseAnalysis';
-import type { GlucoseReading } from '@/types';
+import VoiceInputModal from '@/components/VoiceInputModal';
+import { saveMeal } from '@/lib/firebase/firestore';
+import type { GlucoseReading, FoodItem, MeasurementType } from '@/types';
+import { Mic, Loader2 } from 'lucide-react';
 
 interface TooltipProps {
   active?: boolean;
@@ -49,6 +52,7 @@ export default function GlucosePage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newGlucoseValue, setNewGlucoseValue] = useState('');
   const [newMeasType, setNewMeasType] = useState<GlucoseReading['measurementType']>('random');
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
 
   const { readings, loading, isSubmitting, currentGlucose, averageGlucose, timeInRange, addReading, getChartData } = useGlucoseData('demo');
   const chartData = getChartData();
@@ -67,6 +71,37 @@ export default function GlucosePage() {
       } else {
         alert('저장에 실패했습니다. Vercel 환경 변수가 모두 정확히 입력되었는지 확인해주세요.');
       }
+    }
+  };
+
+  const handleVoiceConfirm = async (
+    foods: Partial<FoodItem>[], 
+    rawText: string,
+    glucose?: { value: number; type: MeasurementType }
+  ) => {
+    try {
+      // 1. 혈당 저장 (인식된 경우)
+      if (glucose) {
+        await addReading(glucose.value, glucose.type);
+      }
+      
+      // 2. 식단 저장 (인식된 경우)
+      if (foods.length > 0) {
+        // 임시로 MealsPage와 동일한 로직 적용 (userId 등)
+        await saveMeal({
+          userId: 'demo',
+          timestamp: new Date(),
+          mealType: 'snack', // 기본값
+          rawVoiceInput: rawText,
+          parsedFoods: foods as FoodItem[],
+          totalCarbs: foods.reduce((s, f) => s + (f.carbs || 0) * (f.quantity || 1), 0),
+          totalCalories: foods.reduce((s, f) => s + (f.calories || 0) * (f.quantity || 1), 0),
+          glucotypeScore: 'yellow',
+        });
+      }
+      setShowVoiceModal(false);
+    } catch (error) {
+      alert('연속 저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -325,6 +360,23 @@ export default function GlucosePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 플로팅 음성 버튼 */}
+      <button
+        onClick={() => setShowVoiceModal(true)}
+        className="fab-mic bg-[var(--color-accent-pink)] shadow-xl shadow-rose-200 border-4 border-white"
+        aria-label="말해서 기록하기"
+      >
+        <Mic size={28} className="text-white" />
+      </button>
+
+      {showVoiceModal && (
+        <VoiceInputModal 
+          onClose={() => setShowVoiceModal(false)} 
+          onConfirm={handleVoiceConfirm}
+          isSubmitting={isSubmitting}
+        />
       )}
 
       <BottomNavigation />

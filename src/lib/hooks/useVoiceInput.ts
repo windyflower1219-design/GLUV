@@ -36,7 +36,7 @@ export function useVoiceInput(
 
     const recognition = new SpeechRecognitionAPI();
     recognition.lang = 'ko-KR';
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
@@ -47,43 +47,44 @@ export function useVoiceInput(
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interim = '';
-      let final = '';
+      let currentFinal = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         const text = result[0].transcript;
         if (result.isFinal) {
-          final += text;
+          currentFinal += text + ' ';
         } else {
           interim += text;
         }
       }
 
       setInterimTranscript(interim);
-      if (final) {
-        setTranscript(prev => prev + final);
-        setState('processing');
-        onResult?.(final);
+      if (currentFinal) {
+        setTranscript(prev => prev + currentFinal);
       }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (event.error === 'no-speech') return; // 무응답은 무시 (연속 인식 중일 수 있음)
+      
       const errorMessages: Record<string, string> = {
         'not-allowed': '마이크 권한이 필요합니다. 설정에서 허용해주세요.',
-        'no-speech': '음성이 감지되지 않았습니다. 다시 시도해주세요.',
         'network': '네트워크 오류가 발생했습니다.',
         'audio-capture': '마이크를 사용할 수 없습니다.',
         'aborted': '음성 인식이 중단되었습니다.',
       };
+      
       setError(errorMessages[event.error] || `오류: ${event.error}`);
       setState('error');
     };
 
     recognition.onend = () => {
-      if (state !== 'error') {
-        setState('idle');
-      }
       setInterimTranscript('');
+      // 연속 인식이지만 브라우저가 끊었을 경우를 대비해 상태만 체크
+      if (state === 'listening') {
+        // 이미 결과는 transcript에 쌓여있음
+      }
     };
 
     return recognition;
@@ -121,9 +122,16 @@ export function useVoiceInput(
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
-    setState('idle');
+    
+    if (transcript.trim() || interimTranscript.trim()) {
+      const finalFullText = (transcript + ' ' + interimTranscript).trim();
+      setState('processing');
+      onResult?.(finalFullText);
+    } else {
+      setState('idle');
+    }
     setInterimTranscript('');
-  }, []);
+  }, [transcript, interimTranscript, onResult]);
 
   const resetTranscript = useCallback(() => {
     setTranscript('');

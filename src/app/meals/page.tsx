@@ -5,8 +5,8 @@ import { Plus, Mic, Camera, Trash2, ChevronDown, Search, Filter } from 'lucide-r
 import BottomNavigation from '@/components/BottomNavigation';
 import VoiceInputModal from '@/components/VoiceInputModal';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
-import { saveMeal, getMeals, deleteMeal } from '@/lib/firebase/firestore';
-import type { FoodItem, Meal, MealType } from '@/types';
+import { saveMeal, getMeals, deleteMeal, saveGlucose } from '@/lib/firebase/firestore';
+import type { FoodItem, Meal, MealType, MeasurementType } from '@/types';
 
 const MEAL_TYPE_LABELS: Record<MealType, { label: string; emoji: string; color: string; bg: string }> = {
   breakfast: { label: '아침', emoji: '🌅', color: 'text-orange-500', bg: 'bg-orange-50' },
@@ -47,35 +47,51 @@ export default function MealsPage() {
     fetchMeals();
   }, [fetchMeals]);
 
-  const handleConfirm = useCallback(async (foods: Partial<FoodItem>[], rawText: string) => {
+  const handleConfirm = useCallback(async (
+    foods: Partial<FoodItem>[], 
+    rawText: string,
+    glucose?: { value: number; type: MeasurementType }
+  ) => {
     const fullFoods = foods as FoodItem[];
     const prediction = predictGlucoseResponse(fullFoods, 100);
     
-    const mealData: Omit<Meal, 'id'> = {
-      userId: 'demo',
-      timestamp: new Date(),
-      mealType: getMealType(),
-      rawVoiceInput: rawText,
-      parsedFoods: fullFoods,
-      totalCarbs: fullFoods.reduce((s, f) => s + f.carbs * (f.quantity || 1), 0),
-      totalCalories: fullFoods.reduce((s, f) => s + f.calories * (f.quantity || 1), 0),
-      glucotypeScore: prediction.riskLevel,
-    };
-
     setIsSubmitting(true);
     try {
-      console.log('Attempting to save meal to Firebase...', mealData);
-      await saveMeal(mealData);
-      console.log('Successfully saved meal to Firebase');
+      // 1. 식단 저장
+      if (fullFoods.length > 0) {
+        const mealData: Omit<Meal, 'id'> = {
+          userId: 'demo',
+          timestamp: new Date(),
+          mealType: getMealType(),
+          rawVoiceInput: rawText,
+          parsedFoods: fullFoods,
+          totalCarbs: fullFoods.reduce((s, f) => s + f.carbs * (f.quantity || 1), 0),
+          totalCalories: fullFoods.reduce((s, f) => s + f.calories * (f.quantity || 1), 0),
+          glucotypeScore: prediction.riskLevel,
+        };
+        console.log('Saving meal...', mealData);
+        await saveMeal(mealData);
+      }
+
+      // 2. 혈당 저장 (인식된 경우)
+      if (glucose) {
+        const glucoseData = {
+          userId: 'demo',
+          timestamp: new Date(),
+          value: glucose.value,
+          measurementType: glucose.type,
+          notes: `음성 입력으로 자동 기록: "${rawText}"`
+        };
+        console.log('Saving glucose...', glucoseData);
+        await saveGlucose(glucoseData);
+      }
+
+      console.log('Successfully saved unified records');
       await fetchMeals(false); // 배경에서 새로고침
       setShowModal(false);
     } catch (error: any) {
-      console.error('Detailed Error saving meal:', error);
-      if (error.code === 'permission-denied') {
-        alert('저장에 실패했습니다. Firebase 콘솔에서 Firestore 규칙(Rules)을 "테스트 모드"로 설정했는지 확인해주세요.');
-      } else {
-        alert('저장에 실패했습니다. Vercel 환경 변수가 모두 정확히 입력되었는지 확인해주세요.');
-      }
+      console.error('Detailed Error saving unified data:', error);
+      alert('저장에 실패했습니다. 네트워크 상태나 설정을 확인해주세요.');
     } finally {
       setIsSubmitting(false);
     }

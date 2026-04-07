@@ -133,6 +133,8 @@ export type VoiceInputState = 'idle' | 'listening' | 'processing' | 'confirming'
 export interface VoiceParseResult {
   rawText: string;
   parsedFoods: Partial<FoodItem>[];
+  glucoseValue?: number;
+  detectedMeasType?: MeasurementType;
   confidenceScore: number;
   needsClarification: boolean;
   clarificationQuestion?: string;
