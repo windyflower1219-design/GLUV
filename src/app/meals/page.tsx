@@ -1,11 +1,15 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Mic, Camera, Trash2, ChevronDown, Search, Filter } from 'lucide-react';
-import BottomNavigation from '@/components/BottomNavigation';
-import VoiceInputModal from '@/components/VoiceInputModal';
+import { 
+  Plus, Camera, Trash2, ChevronDown, 
+  Search, MicIcon, Loader2 
+} from '@/components/common/Icons';
+import PageHeader from '@/components/common/PageHeader';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
 import { saveMeal, getMeals, deleteMeal, saveGlucose } from '@/lib/firebase/firestore';
+import { useVoiceInputContext } from '@/context/VoiceInputContext';
+import { useUnifiedStorage } from '@/lib/hooks/useUnifiedStorage';
 import type { FoodItem, Meal, MealType, MeasurementType } from '@/types';
 
 const MEAL_TYPE_LABELS: Record<MealType, { label: string; emoji: string; color: string; bg: string }> = {
@@ -26,10 +30,11 @@ function getMealType(): MealType {
 export default function MealsPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
+  
+  const { openVoiceInput, isSubmitting, setIsSubmitting } = useVoiceInputContext();
+  const { saveUnifiedRecord } = useUnifiedStorage();
 
   const fetchMeals = useCallback(async (showLoading = true) => {
     if (showLoading) setIsInitialLoading(true);
@@ -45,56 +50,11 @@ export default function MealsPage() {
 
   useEffect(() => {
     fetchMeals();
-  }, [fetchMeals]);
-
-  const handleConfirm = useCallback(async (
-    foods: Partial<FoodItem>[], 
-    rawText: string,
-    glucose?: { value: number; type: MeasurementType }
-  ) => {
-    const fullFoods = foods as FoodItem[];
-    const prediction = predictGlucoseResponse(fullFoods, 100);
     
-    setIsSubmitting(true);
-    try {
-      // 1. 식단 저장
-      if (fullFoods.length > 0) {
-        const mealData: Omit<Meal, 'id'> = {
-          userId: 'demo',
-          timestamp: new Date(),
-          mealType: getMealType(),
-          rawVoiceInput: rawText,
-          parsedFoods: fullFoods,
-          totalCarbs: fullFoods.reduce((s, f) => s + f.carbs * (f.quantity || 1), 0),
-          totalCalories: fullFoods.reduce((s, f) => s + f.calories * (f.quantity || 1), 0),
-          glucotypeScore: prediction.riskLevel,
-        };
-        console.log('Saving meal...', mealData);
-        await saveMeal(mealData);
-      }
-
-      // 2. 혈당 저장 (인식된 경우)
-      if (glucose) {
-        const glucoseData = {
-          userId: 'demo',
-          timestamp: new Date(),
-          value: glucose.value,
-          measurementType: glucose.type,
-          notes: `음성 입력으로 자동 기록: "${rawText}"`
-        };
-        console.log('Saving glucose...', glucoseData);
-        await saveGlucose(glucoseData);
-      }
-
-      console.log('Successfully saved unified records');
-      await fetchMeals(false); // 배경에서 새로고침
-      setShowModal(false);
-    } catch (error: any) {
-      console.error('Detailed Error saving unified data:', error);
-      alert('저장에 실패했습니다. 네트워크 상태나 설정을 확인해주세요.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // 전역 저장 이벤트 리스너
+    const handleRefresh = () => fetchMeals(false);
+    window.addEventListener('record-saved', handleRefresh);
+    return () => window.removeEventListener('record-saved', handleRefresh);
   }, [fetchMeals]);
 
   const handleDelete = async (id: string) => {
@@ -115,18 +75,17 @@ export default function MealsPage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">
-      {/* 헤더 */}
-      <header className="safe-top px-5 pt-4 pb-3 sticky top-0 bg-[var(--color-bg-primary)]/90 backdrop-blur z-10 border-b border-[var(--color-border)]">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">식단 기록</h1>
-          <div className="flex gap-2">
-            <button className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center border border-[var(--color-border)]">
-              <Search size={18} className="text-[var(--color-text-secondary)]" />
-            </button>
-          </div>
-        </div>
-        
-        {/* 날짜 선택 */}
+      <PageHeader 
+        title="식단 기록" 
+        rightElement={
+          <button className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center border border-[var(--color-border)]">
+            <Search size={18} className="text-[var(--color-text-secondary)]" />
+          </button>
+        }
+      />
+      
+      {/* 날짜 선택 섹션 (헤더 바로 아래 유지) */}
+      <div className="px-5 py-3 sticky top-[72px] bg-[var(--color-bg-primary)]/90 backdrop-blur z-10 border-b border-[var(--color-border)]">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {[-3, -2, -1, 0, 1, 2, 3].map(offset => {
             const d = new Date();
@@ -154,7 +113,7 @@ export default function MealsPage() {
             );
           })}
         </div>
-      </header>
+      </div>
 
       <div className="px-4 space-y-5 pt-4">
         {/* 오늘 요약 */}
@@ -195,9 +154,9 @@ export default function MealsPage() {
         {/* 입력 방법 버튼들 */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { icon: <Mic size={22} />, label: '말하기', color: 'bg-blue-50 text-blue-500 border-blue-100', action: () => setShowModal(true) },
+            { icon: <MicIcon size={22} />, label: '말하기', color: 'bg-blue-50 text-blue-500 border-blue-100', action: openVoiceInput },
             { icon: <Camera size={22} />, label: '사진찍기', color: 'bg-emerald-50 text-emerald-500 border-emerald-100', action: () => {} },
-            { icon: <Plus size={22} />, label: '직접쓰기', color: 'bg-slate-50 text-slate-500 border-slate-100', action: () => setShowModal(true) },
+            { icon: <Plus size={22} />, label: '직접쓰기', color: 'bg-slate-50 text-slate-500 border-slate-100', action: openVoiceInput },
           ].map(({ icon, label, color, action }) => (
             <button
               key={label}
@@ -235,7 +194,7 @@ export default function MealsPage() {
                   <div className="h-20 skeleton rounded-3xl" />
                 ) : typeMeals.length === 0 ? (
                   <div
-                    onClick={() => setShowModal(true)}
+                    onClick={openVoiceInput}
                     className="bg-white/40 border-2 border-dashed border-gray-200 p-4 rounded-3xl flex items-center justify-center gap-2 active:bg-gray-50 transition-colors cursor-pointer group"
                   >
                     <div className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -314,25 +273,6 @@ export default function MealsPage() {
           })}
         </div>
       </div>
-
-      {/* 플로팅 추가 버튼 */}
-      <button
-        onClick={() => setShowModal(true)}
-        className="fab-mic bg-[var(--color-accent-pink)] shadow-xl shadow-rose-200 border-4 border-white"
-        aria-label="말해서 기록하기"
-      >
-        <Mic size={28} className="text-white" />
-      </button>
-
-      {showModal && (
-        <VoiceInputModal 
-          onClose={() => setShowModal(false)} 
-          onConfirm={handleConfirm} 
-          isSubmitting={isSubmitting}
-        />
-      )}
-
-      <BottomNavigation />
     </div>
   );
 }

@@ -1,18 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, TrendingDown, TrendingUp, Minus, Target, Activity, Heart, Calendar, ChevronRight } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine, BarChart, Bar, ComposedChart, Line
-} from 'recharts';
-import BottomNavigation from '@/components/BottomNavigation';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Plus, Activity, Target, Heart, 
+  Calendar, ChevronRight, Loader2
+} from '@/components/common/Icons';
+import PageHeader from '@/components/common/PageHeader';
+import StatCard from '@/components/common/StatCard';
 import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
 import { analyzeWeeklyTrend } from '@/lib/algorithms/glucoseAnalysis';
-import VoiceInputModal from '@/components/VoiceInputModal';
-import { saveMeal } from '@/lib/firebase/firestore';
-import type { GlucoseReading, FoodItem, MeasurementType } from '@/types';
-import { Mic, Loader2 } from 'lucide-react';
+import type { GlucoseReading } from '@/types';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, ReferenceLine 
+} from 'recharts';
 
 interface TooltipProps {
   active?: boolean;
@@ -52,11 +53,17 @@ export default function GlucosePage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newGlucoseValue, setNewGlucoseValue] = useState('');
   const [newMeasType, setNewMeasType] = useState<GlucoseReading['measurementType']>('random');
-  const [showVoiceModal, setShowVoiceModal] = useState(false);
 
-  const { readings, loading, isSubmitting, currentGlucose, averageGlucose, timeInRange, addReading, getChartData } = useGlucoseData('demo');
+  const { readings, loading, isSubmitting, currentGlucose, averageGlucose, timeInRange, addReading, getChartData, fetchReadings } = useGlucoseData('demo');
   const chartData = getChartData();
   const weeklyAnalysis = analyzeWeeklyTrend(readings);
+
+  useEffect(() => {
+    // 전역 저장 이벤트 리스너
+    const handleRefresh = () => fetchReadings();
+    window.addEventListener('record-saved', handleRefresh);
+    return () => window.removeEventListener('record-saved', handleRefresh);
+  }, [fetchReadings]);
 
   const handleAddReading = async () => {
     const value = parseInt(newGlucoseValue);
@@ -66,65 +73,27 @@ export default function GlucosePage() {
       setNewGlucoseValue('');
       setShowAddModal(false);
     } catch (error: any) {
-      if (error.code === 'permission-denied') {
-        alert('저장에 실패했습니다. Firebase 콘솔에서 Firestore 규칙(Rules)을 "테스트 모드"로 설정했는지 확인해주세요.');
-      } else {
-        alert('저장에 실패했습니다. Vercel 환경 변수가 모두 정확히 입력되었는지 확인해주세요.');
-      }
+      alert('저장에 실패했습니다.');
     }
   };
-
-  const handleVoiceConfirm = async (
-    foods: Partial<FoodItem>[], 
-    rawText: string,
-    glucose?: { value: number; type: MeasurementType }
-  ) => {
-    try {
-      // 1. 혈당 저장 (인식된 경우)
-      if (glucose) {
-        await addReading(glucose.value, glucose.type);
-      }
-      
-      // 2. 식단 저장 (인식된 경우)
-      if (foods.length > 0) {
-        // 임시로 MealsPage와 동일한 로직 적용 (userId 등)
-        await saveMeal({
-          userId: 'demo',
-          timestamp: new Date(),
-          mealType: 'snack', // 기본값
-          rawVoiceInput: rawText,
-          parsedFoods: foods as FoodItem[],
-          totalCarbs: foods.reduce((s, f) => s + (f.carbs || 0) * (f.quantity || 1), 0),
-          totalCalories: foods.reduce((s, f) => s + (f.calories || 0) * (f.quantity || 1), 0),
-          glucotypeScore: 'yellow',
-        });
-      }
-      setShowVoiceModal(false);
-    } catch (error) {
-      alert('연속 저장 중 오류가 발생했습니다.');
-    }
-  };
-
-  const TrendIcon = weeklyAnalysis.trend === 'improving' ? TrendingDown :
-                    weeklyAnalysis.trend === 'worsening' ? TrendingUp : Minus;
-  const trendColor = weeklyAnalysis.trend === 'improving' ? 'text-[var(--color-success)]' :
-                     weeklyAnalysis.trend === 'worsening' ? 'text-[var(--color-danger)]' : 'text-gray-400';
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">
-      <header className="safe-top px-5 pt-4 pb-3 sticky top-0 bg-[var(--color-bg-primary)]/90 backdrop-blur z-10 border-b border-[var(--color-border)]">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">혈당 리포트</h1>
+      <PageHeader 
+        title="혈당 리포트" 
+        rightElement={
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[var(--color-accent-pink)] text-white text-sm font-black shadow-lg shadow-rose-100 active:scale-95 transition-all"
           >
             <Plus size={18} strokeWidth={3} /> 기록하기
           </button>
-        </div>
+        }
+      />
 
-        {/* 기간 탭 */}
-        <div className="flex gap-1 p-1 rounded-2xl bg-white border border-[var(--color-border)]">
+      <div className="px-4 space-y-5 pt-4">
+        {/* 기간 탭 (기존 헤더에 있던 것을 본문으로 이동시켜 더 깔끔하게 처리) */}
+        <div className="flex gap-1 p-1 rounded-2xl bg-white border border-[var(--color-border)] shadow-sm">
           {(['day', 'week', 'month'] as PeriodType[]).map(p => (
             <button
               key={p}
@@ -137,24 +106,36 @@ export default function GlucosePage() {
             </button>
           ))}
         </div>
-      </header>
 
-      <div className="px-4 space-y-5 pt-4">
         {/* 핵심 지표 카드 3개 */}
         <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: '현재 혈당', value: currentGlucose, unit: 'mg/dL', icon: <Activity size={16} />, color: 'text-rose-500', bg: 'bg-rose-50' },
-            { label: '평균 혈당', value: averageGlucose, unit: 'mg/dL', icon: <Target size={16} />, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-            { label: '목표 범위', value: timeInRange, unit: '%', icon: <Heart size={16} />, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-          ].map(({ label, value, unit, icon, color, bg }) => (
-            <div key={label} className="bg-white rounded-3xl p-4 text-center shadow-sm border border-[var(--color-border)] hover:border-rose-100 transition-colors">
-              <div className={`w-8 h-8 rounded-xl ${bg} ${color} flex items-center justify-center mx-auto mb-2 shadow-inner border border-white`}>
-                {icon}
-              </div>
-              <p className={`text-2xl font-black ${color}`}>{loading ? '-' : value}</p>
-              <p className="text-[10px] font-bold text-gray-400 mt-0.5">{label}</p>
-            </div>
-          ))}
+          <StatCard
+            label="현재 혈당"
+            value={loading ? '-' : currentGlucose}
+            unit="mg/dL"
+            icon={<Activity size={16} />}
+            color="text-rose-500"
+            bg="bg-rose-50"
+            variant="center"
+          />
+          <StatCard
+            label="평균 혈당"
+            value={loading ? '-' : averageGlucose}
+            unit="mg/dL"
+            icon={<Target size={16} />}
+            color="text-indigo-500"
+            bg="bg-indigo-50"
+            variant="center"
+          />
+          <StatCard
+            label="목표 범위"
+            value={loading ? '-' : timeInRange}
+            unit="%"
+            icon={<Heart size={16} />}
+            color="text-emerald-500"
+            bg="bg-emerald-50"
+            variant="center"
+          />
         </div>
 
         {/* 메인 차트 */}
@@ -181,31 +162,10 @@ export default function GlucosePage() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="6 6" stroke="#f1f1f1" vertical={false} />
-                <XAxis 
-                  dataKey="time" 
-                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} 
-                  tickLine={false} 
-                  axisLine={false} 
-                  dy={10}
-                />
-                <YAxis 
-                  domain={[50, 200]} 
-                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} 
-                  tickLine={false} 
-                  axisLine={false} 
-                />
-                <ReferenceLine 
-                  y={140} 
-                  stroke="#fda4af" 
-                  strokeWidth={1} 
-                  strokeDasharray="4 4" 
-                />
-                <ReferenceLine 
-                  y={70} 
-                  stroke="#ca8a04" 
-                  strokeWidth={1} 
-                  strokeDasharray="4 4" 
-                />
+                <XAxis dataKey="time" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={10} />
+                <YAxis domain={[50, 200]} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} tickLine={false} axisLine={false} />
+                <ReferenceLine y={140} stroke="#fda4af" strokeWidth={1} strokeDasharray="4 4" />
+                <ReferenceLine y={70} stroke="#ca8a04" strokeWidth={1} strokeDasharray="4 4" />
                 <Tooltip content={<GlucoseTooltip />} />
                 <Area 
                   type="monotone" 
@@ -352,7 +312,7 @@ export default function GlucosePage() {
                 className="flex-1 bg-gray-800 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl shadow-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-20"
               >
                 {isSubmitting ? (
-                  <span className="flex items-center gap-2">저장 중... <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /></span>
+                  <span className="flex items-center gap-2">저장 중... <Loader2 size={16} className="animate-spin" /></span>
                 ) : (
                   <>기록 완료 <ChevronRight size={18} strokeWidth={3} /></>
                 )}
@@ -361,25 +321,6 @@ export default function GlucosePage() {
           </div>
         </div>
       )}
-
-      {/* 플로팅 음성 버튼 */}
-      <button
-        onClick={() => setShowVoiceModal(true)}
-        className="fab-mic bg-[var(--color-accent-pink)] shadow-xl shadow-rose-200 border-4 border-white"
-        aria-label="말해서 기록하기"
-      >
-        <Mic size={28} className="text-white" />
-      </button>
-
-      {showVoiceModal && (
-        <VoiceInputModal 
-          onClose={() => setShowVoiceModal(false)} 
-          onConfirm={handleVoiceConfirm}
-          isSubmitting={isSubmitting}
-        />
-      )}
-
-      <BottomNavigation />
     </div>
   );
 }
