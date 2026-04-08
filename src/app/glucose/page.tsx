@@ -73,7 +73,7 @@ export default function GlucosePage() {
       setNewGlucoseValue('');
       setShowAddModal(false);
     } catch (error: any) {
-      alert('저장에 실패했습니다.');
+      alert(`저장에 실패했습니다: ${error.message || error}`);
     }
   };
 

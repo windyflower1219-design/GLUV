@@ -88,72 +88,130 @@ function findFoodInText(text: string): Array<{ foodKey: string; position: number
 export async function parseMealText(
   voiceText: string,
 ): Promise<VoiceParseResult> {
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const useGemini = !!process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-    const prompt = `
-      사용자의 음성 입력에서 음식 정보와 혈당 수치를 추출해줘.
-      입력: "${voiceText}"
+  if (useGemini) {
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      다음 JSON 형식으로만 응답해:
-      {
-        "parsedFoods": [
-          {
-            "name": "음식명",
-            "quantity": 수량(숫자),
-            "unit": "단위",
-            "carbs": 탄수화물(g),
-            "calories": 칼로리(kcal),
-            "glycemicIndex": 혈당지수(0-100),
-            "protein": 단백질(g),
-            "fat": 지방(g),
-            "sodium": 나트륨(mg)
-          }
-        ],
-        "glucoseValue": 혈당수치(숫자, 없으면 null),
-        "detectedMeasType": "fasting" | "postmeal_30m" | "postmeal_1h" | "postmeal_2h" | "random",
-        "needsClarification": 모호한 경우 true,
-        "clarificationQuestion": "모호한 경우 사용자에게 던질 친절한 질문"
-      }
+      const prompt = `
+        사용자의 음성 입력에서 음식 정보와 혈당 수치를 추출해줘.
+        입력: "${voiceText}"
 
-      지침:
-      1. 한국 음식 영양 정보를 바탕으로 최대한 정확한 수치를 넣어줘. 
-      2. 수량이나 단위가 없으면 1인분을 기준으로 해.
-      3. "혈당 120"과 같은 패턴이 있으면 glucoseValue에 숫자를 넣어.
-      4. 문맥상 "공복", "식후 1시간" 등이 있으면 detectedMeasType을 정해줘. 없으면 "random".
-      5. 아내분을 대하듯 따뜻하고 부드러운 말투로 질문을 생성해줘.
-    `;
+        다음 JSON 형식으로만 응답해:
+        {
+          "parsedFoods": [
+            {
+              "name": "음식명",
+              "quantity": 수량(숫자),
+              "unit": "단위",
+              "carbs": 탄수화물(g),
+              "calories": 칼로리(kcal),
+              "glycemicIndex": 혈당지수(0-100),
+              "protein": 단백질(g),
+              "fat": 지방(g),
+              "sodium": 나트륨(mg)
+            }
+          ],
+          "glucoseValue": 혈당수치(숫자, 없으면 null),
+          "detectedMeasType": "fasting" | "postmeal_30m" | "postmeal_1h" | "postmeal_2h" | "random",
+          "needsClarification": 모호한 경우 true,
+          "clarificationQuestion": "모호한 경우 사용자에게 던질 친절한 질문"
+        }
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // JSON 추출 (Markdown backticks 제거)
-    const jsonStr = text.replace(/```json|```/g, '').trim();
-    const data = JSON.parse(jsonStr);
+        지침:
+        1. 한국 음식 영양 정보를 바탕으로 최대한 정확한 수치를 넣어줘. 
+        2. 수량이나 단위가 없으면 1인분을 기준으로 해.
+        3. "혈당 120"과 같은 패턴이 있으면 glucoseValue에 숫자를 넣어.
+        4. 문맥상 "공복", "식후 1시간" 등이 있으면 detectedMeasType을 정해줘. 없으면 "random".
+        5. 아내분을 대하듯 따뜻하고 부드러운 말투로 질문을 생성해줘.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      // JSON 추출 (Markdown backticks 제거)
+      const jsonStr = text.replace(/```json|```/g, '').trim();
+      const data = JSON.parse(jsonStr);
+
+      return {
+        rawText: voiceText,
+        parsedFoods: data.parsedFoods.map((f: any) => ({
+          ...f,
+          id: `food_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        })),
+        glucoseValue: data.glucoseValue || undefined,
+        detectedMeasType: data.detectedMeasType as MeasurementType,
+        confidenceScore: 0.9,
+        needsClarification: !!data.needsClarification,
+        clarificationQuestion: data.clarificationQuestion,
+      };
+    } catch (error) {
+      console.warn('Gemini Parsing Error, falling back to local fallback:', error);
+      // Fall through to local fallback
+    }
+  }
+
+  // --- Local Fallback Parser ---
+  const foundFoods = findFoodInText(voiceText);
+  let glucoseMatch = voiceText.match(/혈당\s*(\d{2,3})/);
+  if (!glucoseMatch) glucoseMatch = voiceText.match(/(\d{2,3})\s*나왔어/);
+  const glucoseValue = glucoseMatch ? parseInt(glucoseMatch[1]) : undefined;
+  
+  let detectedMeasType: MeasurementType = 'random';
+  if (voiceText.includes('공복')) detectedMeasType = 'fasting';
+  else if (voiceText.includes('식후 2시간')) detectedMeasType = 'postmeal_2h';
+  else if (voiceText.includes('식후 1시간') || voiceText.includes('식후')) detectedMeasType = 'postmeal_1h';
+
+  if (foundFoods.length > 0) {
+    const parsedFoods = foundFoods.map(f => {
+      const base = KOREAN_FOOD_DB[f.foodKey];
+      // 간단한 수량 매칭
+      const qtyInfo = extractQuantity(voiceText);
+      return {
+        id: `food_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        name: base.name,
+        quantity: qtyInfo.quantity,
+        unit: qtyInfo.unit,
+        carbs: base.carbs,
+        calories: base.calories,
+        glycemicIndex: base.glycemicIndex,
+        protein: base.protein,
+        fat: base.fat,
+        sodium: base.sodium
+      };
+    });
 
     return {
       rawText: voiceText,
-      parsedFoods: data.parsedFoods.map((f: any) => ({
-        ...f,
-        id: `food_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      })),
-      glucoseValue: data.glucoseValue || undefined,
-      detectedMeasType: data.detectedMeasType as MeasurementType,
-      confidenceScore: 0.9,
-      needsClarification: !!data.needsClarification,
-      clarificationQuestion: data.clarificationQuestion,
+      parsedFoods,
+      glucoseValue,
+      detectedMeasType,
+      confidenceScore: 0.6,
+      needsClarification: false,
     };
-  } catch (error) {
-    console.error('Gemini Parsing Error:', error);
+  }
+
+  // If even local parser couldn't find foods but found glucose:
+  if (glucoseValue) {
     return {
       rawText: voiceText,
       parsedFoods: [],
-      confidenceScore: 0,
-      needsClarification: true,
-      clarificationQuestion: '죄송해요, 분석 중에 작은 실수가 있었어요. 다시 한 번 말씀해 주실래요?',
+      glucoseValue,
+      detectedMeasType,
+      confidenceScore: 0.8,
+      needsClarification: false,
     };
   }
+
+  return {
+    rawText: voiceText,
+    parsedFoods: [],
+    confidenceScore: 0,
+    needsClarification: true,
+    clarificationQuestion: '죄송해요, 조금 더 구체적으로 음식 이름이나 혈당 수치를 말씀해 주시겠어요?',
+  };
 }
 
 export type { VoiceParseResult };

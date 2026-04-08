@@ -32,8 +32,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       
       // 페이지 자동 새로고침 유도 (간단한 방식)
       window.dispatchEvent(new CustomEvent('record-saved'));
-    } catch (error) {
-      alert('저장에 실패했습니다. 다시 시도해주세요.');
+    } catch (error: any) {
+      alert(`저장에 실패했습니다: ${error.message || error}`);
     } finally {
       setIsSubmitting(false);
     }
