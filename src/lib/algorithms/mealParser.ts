@@ -1,9 +1,15 @@
-// 음식 NLP 파서 (로컬 + Gemini API 하이브리드)
+// 음식 NLP 파서 (로컬 + OpenAI 하이브리드)
+import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { FoodItem, VoiceParseResult, MeasurementType } from '@/types';
 
-// API 키 설정
+// API 키 설정 (인사이트 등에 사용되는 제미니 유지, OpenAI 신규 추가)
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
+
+const openai = new OpenAI({
+  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || '',
+  dangerouslyAllowBrowser: true,
+});
 
 // 한국 음식 영양 데이터베이스 (로컬 캐시)
 const KOREAN_FOOD_DB: Record<string, Omit<FoodItem, 'id' | 'quantity'>> = {
@@ -123,12 +129,10 @@ function findFoodInText(text: string): Array<{ foodKey: string; position: number
 export async function parseMealText(
   voiceText: string,
 ): Promise<VoiceParseResult> {
-  const useGemini = !!process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const useOpenAI = !!process.env.NEXT_PUBLIC_OPENAI_API_KEY;
 
-  if (useGemini) {
+  if (useOpenAI) {
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
       const prompt = `
         사용자의 음성 입력에서 음식 정보와 혈당 수치를 추출해줘.
         입력: "${voiceText}"
@@ -162,28 +166,29 @@ export async function parseMealText(
         5. 사용자를 대하듯 따뜻하고 다정한 말투로 질문을 생성해줘.
       `;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      // JSON 추출 (Markdown backticks 제거)
-      const jsonStr = text.replace(/```json|```/g, '').trim();
-      const data = JSON.parse(jsonStr);
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "system", content: prompt }],
+        response_format: { type: "json_object" }
+      });
+
+      const text = response.choices[0].message.content || '{}';
+      const data = JSON.parse(text);
 
       return {
         rawText: voiceText,
-        parsedFoods: data.parsedFoods.map((f: any) => ({
+        parsedFoods: (data.parsedFoods || []).map((f: any) => ({
           ...f,
           id: `food_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         })),
         glucoseValue: data.glucoseValue || undefined,
-        detectedMeasType: data.detectedMeasType as MeasurementType,
+        detectedMeasType: (data.detectedMeasType as MeasurementType) || 'random',
         confidenceScore: 0.9,
         needsClarification: !!data.needsClarification,
         clarificationQuestion: data.clarificationQuestion,
       };
     } catch (error) {
-      console.warn('Gemini Parsing Error, falling back to local fallback:', error);
+      console.warn('OpenAI Parsing Error, falling back to local fallback:', error);
       // Fall through to local fallback
     }
   }

@@ -95,7 +95,7 @@ export default function DashboardPage() {
         {/* 현재 혈당 게이지 카드 */}
         <div className="bg-white rounded-[40px] p-8 shadow-sm border border-gray-50 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-full -mr-16 -mt-16 opacity-50" />
-          <p className="text-xs font-black text-gray-300 uppercase tracking-widest text-center mb-8">현재 우리 아내 혈당</p>
+          <p className="text-xs font-black text-gray-300 uppercase tracking-widest text-center mb-8">당신의 혈당</p>
           <GlucoseGauge value={currentGlucose} loading={loading} />
           <div className="flex items-center justify-center gap-2 mt-8 py-2 px-4 bg-gray-50/50 rounded-2xl w-fit mx-auto border border-gray-50">
              <span className="w-1 h-1 rounded-full bg-gray-300" />

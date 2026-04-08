@@ -1,6 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import BottomNavigation from '@/components/BottomNavigation';
 import VoiceInputModal from '@/components/VoiceInputModal';
 import { useVoiceInputContext } from '@/context/VoiceInputContext';
@@ -12,6 +14,10 @@ interface AppLayoutProps {
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
   const { 
     isOpen, 
     closeVoiceInput, 
@@ -21,6 +27,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   } = useVoiceInputContext();
   
   const { saveUnifiedRecord } = useUnifiedStorage();
+
+  useEffect(() => {
+    if (!authLoading && !user && pathname !== '/login') {
+      router.push('/login');
+    }
+  }, [user, authLoading, pathname, router]);
 
   const handleConfirm = async (foods: any[], rawText: string, glucose?: any, timestamp?: Date) => {
     setIsSubmitting(true);
