@@ -29,6 +29,7 @@ export const viewport: Viewport = {
   themeColor: '#FFF9F2',
 };
 
+import { AuthProvider } from '@/context/AuthContext';
 import { VoiceInputProvider } from '@/context/VoiceInputContext';
 import AppLayout from '@/components/layout/AppLayout';
 
@@ -44,11 +45,13 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] antialiased overscroll-none">
-        <VoiceInputProvider>
-          <AppLayout>
-            {children}
-          </AppLayout>
-        </VoiceInputProvider>
+        <AuthProvider>
+          <VoiceInputProvider>
+            <AppLayout>
+              {children}
+            </AppLayout>
+          </VoiceInputProvider>
+        </AuthProvider>
       </body>
     </html>
   );

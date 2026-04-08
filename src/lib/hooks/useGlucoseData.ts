@@ -3,8 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { saveGlucose, getGlucoseReadings } from '@/lib/firebase/firestore';
 import type { GlucoseReading, GlucoseChartData } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 
-export function useGlucoseData(userId: string = 'demo') {
+export function useGlucoseData() {
+  const { user } = useAuth();
+  const userId = user?.uid || 'guest';
   const [readings, setReadings] = useState<GlucoseReading[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,11 +32,11 @@ export function useGlucoseData(userId: string = 'demo') {
     fetchReadings();
   }, [fetchReadings]);
 
-  const addReading = useCallback(async (value: number, type: GlucoseReading['measurementType'], linkedMealId?: string) => {
+  const addReading = useCallback(async (value: number, type: GlucoseReading['measurementType'], timestamp: Date = new Date(), linkedMealId?: string) => {
     setIsSubmitting(true);
     const readingData: Omit<GlucoseReading, 'id'> = {
       userId,
-      timestamp: new Date(),
+      timestamp,
       value,
       measurementType: type,
       linkedMealId,

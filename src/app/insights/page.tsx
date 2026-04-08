@@ -1,61 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Zap, ChevronRight, CheckCircle, Bell, TrendingUp, Award, Filter, Sparkles, Heart, Star, Info } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Zap, ChevronRight, CheckCircle, Bell, TrendingUp, Award, Filter, Sparkles, Heart, Star, Info, Loader2 } from 'lucide-react';
 import BottomNavigation from '@/components/BottomNavigation';
 import type { ActionableInsight } from '@/types';
-
-const DEMO_INSIGHTS: ActionableInsight[] = [
-  {
-    id: '1',
-    type: 'spike_alert',
-    title: '🚨 혈당이 조금 놀랐나 봐요!',
-    message: '점심에 드신 제육볶음의 달콤한 양념 때문에 혈당이 평소보다 28% 더 기운차게 올라갔어요. 다음번에는 설탕 대신 올리고당을 쓴 불고기를 드셔보거나, 밥을 현미밥으로 반 그릇만 드셔보세요. 지금 바로 저랑 10분만 가볍게 산책할까요? 🚶‍♀️💕',
-    emoji: '🚨',
-    actionLabel: '10분 산책 타이머 시작',
-    linkedMealId: '2',
-    createdAt: new Date(Date.now() - 2 * 3600000),
-    isRead: false,
-  },
-  {
-    id: '2',
-    type: 'prediction',
-    title: '📊 내일 아침도 기분 좋게!',
-    message: '오늘 저녁 식단을 아주 건강하게 챙겨주셔서, 내일 아침 공복 혈당은 90-105 mg/dL 정도로 아주 예쁘게 나올 것 같아요. 지금처럼만 하면 정말 완벽해요!',
-    emoji: '📊',
-    createdAt: new Date(Date.now() - 3 * 3600000),
-    isRead: false,
-  },
-  {
-    id: '3',
-    type: 'recommendation',
-    title: '💡 아내분만을 위한 꿀팁',
-    message: '지난 일주일 데이터를 보니, 현미밥이랑 달걀후라이를 같이 드실 때 혈당이 제일 얌전했어요. 특히 된장찌개랑 같이 드시는 게 아내분 몸에 가장 잘 맞는 "꿀조합" 식단이에요. 내일 아침 메뉴로 어떠세요?',
-    emoji: '💡',
-    actionLabel: '추천 레시피 보기',
-    createdAt: new Date(Date.now() - 5 * 3600000),
-    isRead: true,
-  },
-  {
-    id: '4',
-    type: 'achievement',
-    title: '🏆 우와! 벌써 3일째예요!',
-    message: '3일 연속으로 혈당 목표 범위를 아주 잘 지켜주셨어요! 남편분도 정말 기뻐하실 거예요. 이대로라면 이번 달 목표도 문제없이 달성할 수 있겠어요. 아내분 최고! 👍✨',
-    emoji: '🏆',
-    createdAt: new Date(Date.now() - 8 * 3600000),
-    isRead: true,
-  },
-  {
-    id: '5',
-    type: 'warning',
-    title: '⚠️ 출출할 때 조심하세요',
-    message: '평소에 오후 4시에서 5시 사이가 되면 혈당이 조금 내려가는 편이에요. 이럴 때 당분이 많은 간식보다는 견과류 몇 알이나 사과 한 조각을 드시는 게 아내분 건강을 위해 훨씬 좋아요! 🍎🥜',
-    emoji: '⚠️',
-    actionLabel: '건강한 간식 추천',
-    createdAt: new Date(Date.now() - 24 * 3600000),
-    isRead: true,
-  },
-];
+import { useAuth } from '@/context/AuthContext';
+import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
+import { getMeals } from '@/lib/firebase/firestore';
 
 const TYPE_FILTERS = [
   { key: 'all', label: '전체보기' },
@@ -83,11 +34,55 @@ function formatRelativeTime(date: Date): string {
 }
 
 export default function InsightsPage() {
-  const [insights, setInsights] = useState<ActionableInsight[]>(DEMO_INSIGHTS);
+  const { user } = useAuth();
+  const userId = user?.uid || 'guest';
+  const { averageGlucose } = useGlucoseData();
+  const [insights, setInsights] = useState<ActionableInsight[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
-  const [expandedId, setExpandedId] = useState<string | null>('1');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const unreadCount = insights.filter(i => !i.isRead).length;
+  const fetchAIInsights = useCallback(async () => {
+    setIsGenerating(true);
+    try {
+      // 최근 2일 식단 정보 요약 가져오기
+      const recentMeals = await getMeals(userId, new Date()); 
+      // API Call
+      const res = await fetch('/api/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          averageGlucose,
+          recentMeals: recentMeals.map(m => m.parsedFoods.map((f: any) => f.name).join(', ')),
+          isDemo: userId === 'guest'
+        }),
+      });
+      if (!res.ok) throw new Error('API Error');
+      const data = await res.json();
+      
+      const mapped = (data.insights || []).map((ins: any) => ({
+        ...ins,
+        createdAt: new Date(),
+        isRead: false
+      }));
+      setInsights(mapped);
+      if (mapped.length > 0) setExpandedId(mapped[0].id);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [userId, averageGlucose]);
+
+  // 처음 들어왔을 때 인사이트가 비어있으면 생성
+  useEffect(() => {
+    if (insights.length === 0) {
+      fetchAIInsights();
+    }
+  }, [insights.length, fetchAIInsights]);
+
+  const unreadCount = insights.filter((i) => !i.isRead).length;
 
   const filtered = activeFilter === 'all'
     ? insights
@@ -165,9 +160,32 @@ export default function InsightsPage() {
 
         {/* 인사이트 목록 */}
         <div className="space-y-4 pb-10">
-          <h2 className="text-xs font-black text-gray-300 uppercase tracking-widest px-1">최근 소식들</h2>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-black text-gray-300 uppercase tracking-widest">최근 소식들</h2>
+            <button 
+              onClick={fetchAIInsights} 
+              disabled={isGenerating}
+              className="text-[10px] font-black text-[var(--color-accent-pink)] bg-rose-50 px-3 py-1 rounded-full flex items-center gap-1 disabled:opacity-50"
+            >
+              {isGenerating ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+              AI 새로고침
+            </button>
+          </div>
           
-          {filtered.map(insight => {
+          {isGenerating ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-white/40 rounded-[32px] border-2 border-dashed border-gray-100 min-h-[200px] animate-pulse">
+               <Loader2 size={32} className="text-[var(--color-accent-pink)] animate-spin mb-4" />
+               <p className="text-sm font-black text-gray-500">회원님의 건강 트렌드를 살펴보고 있어요!</p>
+               <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">AI 맞춤형 코칭 분석 중...</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-20 text-center animate-in fade-in zoom-in duration-500 bg-white/40 rounded-[32px] border-2 border-dashed border-gray-100">
+              <div className="w-20 h-20 bg-gray-50 rounded-[32px] flex items-center justify-center mx-auto mb-6 border border-gray-100">
+                 <Star size={32} className="text-gray-200" />
+              </div>
+              <p className="text-sm font-black text-gray-400">아직 새로운 소식이 없어요!</p>
+            </div>
+          ) : filtered.map(insight => {
             const colors = TYPE_COLORS[insight.type] || TYPE_COLORS.recommendation;
             const isExpanded = expandedId === insight.id;
 
@@ -226,16 +244,6 @@ export default function InsightsPage() {
             );
           })}
         </div>
-
-        {filtered.length === 0 && (
-          <div className="py-20 text-center animate-in fade-in zoom-in duration-500">
-            <div className="w-20 h-20 bg-gray-50 rounded-[32px] flex items-center justify-center mx-auto mb-6 border border-gray-100">
-               <Star size={32} className="text-gray-200" />
-            </div>
-            <p className="text-sm font-black text-gray-400">아직 새로운 소식이 없어요!</p>
-            <p className="text-[10px] font-bold text-gray-300 mt-1 uppercase tracking-widest">기다려주시면 예쁜 소식 가져올게요</p>
-          </div>
-        )}
 
         {/* 전체 읽음 처리 */}
         {unreadCount > 0 && (

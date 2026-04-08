@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Mic, X, Send, Loader2, ChevronRight, Sparkles } from 'lucide-react';
+import { Mic, X, Send, Loader2, ChevronRight, Sparkles, Clock } from 'lucide-react';
 import { useVoiceInput } from '@/lib/hooks/useVoiceInput';
 import { parseMealText } from '@/lib/algorithms/mealParser';
 import type { FoodItem, VoiceParseResult, MeasurementType } from '@/types';
 
 interface VoiceInputModalProps {
   onClose: () => void;
-  onConfirm: (foods: Partial<FoodItem>[], rawText: string, glucose?: { value: number; type: MeasurementType }) => void;
+  onConfirm: (foods: Partial<FoodItem>[], rawText: string, glucose?: { value: number; type: MeasurementType }, timestamp?: Date) => void;
   isSubmitting?: boolean;
 }
 
@@ -17,6 +17,11 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
   const [isParsing, setIsParsing] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [editedGlucose, setEditedGlucose] = useState<number | undefined>(undefined);
+  
+  const [selectedTime, setSelectedTime] = useState<string>(() => {
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+    return (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
+  });
 
   const handleVoiceResult = useCallback(async (text: string) => {
     setIsParsing(true);
@@ -266,6 +271,22 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
               )}
             </div>
 
+            {/* 기록 시간 설정 */}
+            <div className="mb-6 bg-white border border-gray-100 rounded-3xl p-4 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center">
+                  <Clock size={14} className="text-gray-400" />
+                </div>
+                <span className="text-xs font-black text-gray-600">기록 시간</span>
+              </div>
+              <input 
+                type="datetime-local" 
+                value={selectedTime}
+                onChange={(e) => setSelectedTime(e.target.value)}
+                className="text-xs font-bold text-gray-800 bg-transparent outline-none border-b border-dashed border-gray-300 focus:border-indigo-400"
+              />
+            </div>
+
             <div className="flex gap-3 sticky bottom-0 bg-[#FFFCF7]/95 backdrop-blur py-2">
               <button
                 onClick={() => {
@@ -283,7 +304,7 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
                     type: parseResult.detectedMeasType || 'random'
                   } : undefined;
                   
-                  onConfirm(parseResult.parsedFoods, parseResult.rawText, glucoseData);
+                  onConfirm(parseResult.parsedFoods, parseResult.rawText, glucoseData, new Date(selectedTime));
                 }}
                 disabled={(parseResult.parsedFoods.length === 0 && editedGlucose === undefined) || isSubmitting}
                 className="flex-1 bg-gray-800 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl shadow-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2"

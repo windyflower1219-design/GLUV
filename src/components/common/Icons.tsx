@@ -4,7 +4,7 @@ import {
   Sparkles as LucideSparkles,
   Search, Bell, Plus, ChevronRight, ChevronDown, Trash2,
   Calendar, Activity, Target, Heart, Flame, Utensils,
-  Moon, Sun, TrendingUp, TrendingDown, Minus, Camera, Filter, Award, Zap, Coffee, Loader2
+  Moon, Sun, TrendingUp, TrendingDown, Minus, Camera, Filter, Award, Zap, Coffee, Loader2, Clock
 } from 'lucide-react';
 
 interface IconProps {
@@ -36,5 +36,5 @@ export const SparklesIcon = ({ size = 24, className = '', strokeWidth = 3 }: Ico
 export { 
   Search, Bell, Plus, ChevronRight, ChevronDown, Trash2,
   Calendar, Activity, Target, Heart, Flame, Utensils,
-  Moon, Sun, TrendingUp, TrendingDown, Minus, Camera, Filter, Award, Zap, Coffee, Loader2
+  Moon, Sun, TrendingUp, TrendingDown, Minus, Camera, Filter, Award, Zap, Coffee, Loader2, Clock
 };

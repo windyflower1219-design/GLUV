@@ -11,6 +11,7 @@ import { saveMeal, getMeals, deleteMeal, saveGlucose } from '@/lib/firebase/fire
 import { useVoiceInputContext } from '@/context/VoiceInputContext';
 import { useUnifiedStorage } from '@/lib/hooks/useUnifiedStorage';
 import type { FoodItem, Meal, MealType, MeasurementType } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 
 const MEAL_TYPE_LABELS: Record<MealType, { label: string; emoji: string; color: string; bg: string }> = {
   breakfast: { label: '아침', emoji: '🌅', color: 'text-orange-500', bg: 'bg-orange-50' },
@@ -28,6 +29,8 @@ function getMealType(): MealType {
 }
 
 export default function MealsPage() {
+  const { user } = useAuth();
+  const userId = user?.uid || 'guest';
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -39,7 +42,7 @@ export default function MealsPage() {
   const fetchMeals = useCallback(async (showLoading = true) => {
     if (showLoading) setIsInitialLoading(true);
     try {
-      const data = await getMeals('demo', selectedDate);
+      const data = await getMeals(userId, selectedDate);
       setMeals(data);
     } catch (error) {
       console.error('Failed to fetch meals:', error);

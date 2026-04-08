@@ -12,6 +12,7 @@ import GlucoseGauge from '@/components/common/GlucoseGauge';
 import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
 import { getMeals } from '@/lib/firebase/firestore';
 import type { Meal } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 
 // ==============================
 // 커스텀 툴팁
@@ -42,15 +43,17 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const userId = user?.uid || 'guest';
   const [todayMeals, setTodayMeals] = useState<Meal[]>([]);
   const [latestInsight] = useState('어제보다 혈당 관리가 안정적이에요! 남편분이 정성껏 준비한 저녁 식사 덕분일까요? 오늘도 화이팅! 💕');
 
-  const { currentGlucose, averageGlucose, timeInRange, getChartData, loading, fetchReadings } = useGlucoseData('demo');
+  const { currentGlucose, averageGlucose, timeInRange, getChartData, loading, fetchReadings } = useGlucoseData();
   const chartData = getChartData();
 
   const fetchAllData = useCallback(async () => {
     try {
-      const meals = await getMeals('demo', new Date());
+      const meals = await getMeals(userId, new Date());
       setTodayMeals(meals);
       await fetchReadings();
     } catch (error) {

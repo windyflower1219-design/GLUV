@@ -22,10 +22,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   
   const { saveUnifiedRecord } = useUnifiedStorage();
 
-  const handleConfirm = async (foods: any[], rawText: string, glucose?: any) => {
+  const handleConfirm = async (foods: any[], rawText: string, glucose?: any, timestamp?: Date) => {
     setIsSubmitting(true);
     try {
-      await saveUnifiedRecord(foods, rawText, glucose);
+      await saveUnifiedRecord(foods, rawText, glucose, timestamp);
       // 성공 시 페이지 데이터를 새로고침하기 위해 이벤트를 발생시키거나 
       // 단순히 모달을 닫습니다. (실제 데이터 갱신은 각 페이지의 useEffect에서 처리)
       closeVoiceInput();

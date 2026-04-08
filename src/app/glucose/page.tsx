@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, Activity, Target, Heart, 
-  Calendar, ChevronRight, Loader2
+  Calendar, ChevronRight, Loader2, Clock
 } from '@/components/common/Icons';
 import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
@@ -53,8 +53,12 @@ export default function GlucosePage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newGlucoseValue, setNewGlucoseValue] = useState('');
   const [newMeasType, setNewMeasType] = useState<GlucoseReading['measurementType']>('random');
+  const [selectedTime, setSelectedTime] = useState<string>(() => {
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+    return (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
+  });
 
-  const { readings, loading, isSubmitting, currentGlucose, averageGlucose, timeInRange, addReading, getChartData, fetchReadings } = useGlucoseData('demo');
+  const { readings, loading, isSubmitting, currentGlucose, averageGlucose, timeInRange, addReading, getChartData, fetchReadings } = useGlucoseData();
   const chartData = getChartData();
   const weeklyAnalysis = analyzeWeeklyTrend(readings);
 
@@ -69,7 +73,7 @@ export default function GlucosePage() {
     const value = parseInt(newGlucoseValue);
     if (isNaN(value) || value < 20 || value > 600) return;
     try {
-      await addReading(value, newMeasType);
+      await addReading(value, newMeasType, new Date(selectedTime));
       setNewGlucoseValue('');
       setShowAddModal(false);
     } catch (error: any) {
@@ -276,6 +280,21 @@ export default function GlucosePage() {
                 />
                 <span className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-gray-300">mg/dL</span>
               </div>
+            </div>
+
+            <div className="mb-6 bg-white border border-gray-100 rounded-3xl p-4 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center">
+                  <Clock size={14} className="text-gray-400" />
+                </div>
+                <span className="text-xs font-black text-gray-600">측정 시간</span>
+              </div>
+              <input 
+                type="datetime-local" 
+                value={selectedTime}
+                onChange={(e) => setSelectedTime(e.target.value)}
+                className="text-xs font-bold text-gray-800 bg-transparent outline-none border-b border-dashed border-gray-300 focus:border-indigo-400"
+              />
             </div>
 
             <div className="mb-8">

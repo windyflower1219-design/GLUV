@@ -33,6 +33,41 @@ const KOREAN_FOOD_DB: Record<string, Omit<FoodItem, 'id' | 'quantity'>> = {
   '커피': { name: '커피', unit: '잔', carbs: 3, calories: 15, glycemicIndex: 0, protein: 0, fat: 0, sodium: 10 },
   '아메리카노': { name: '아메리카노', unit: '잔', carbs: 1, calories: 5, glycemicIndex: 0, protein: 0, fat: 0, sodium: 5 },
   '라떼': { name: '라떼', unit: '잔', carbs: 15, calories: 120, glycemicIndex: 30, protein: 6, fat: 5, sodium: 80 },
+  // 신규 추가분
+  '국밥': { name: '국밥', unit: '그릇', carbs: 65, calories: 450, glycemicIndex: 65, protein: 25, fat: 15, sodium: 1200 },
+  '김밥': { name: '김밥', unit: '줄', carbs: 70, calories: 480, glycemicIndex: 60, protein: 12, fat: 14, sodium: 900 },
+  '돈까스': { name: '돈까스', unit: '인분', carbs: 45, calories: 600, glycemicIndex: 65, protein: 28, fat: 35, sodium: 1100 },
+  '초밥': { name: '초밥', unit: '인분', carbs: 85, calories: 550, glycemicIndex: 70, protein: 22, fat: 10, sodium: 1300 },
+  '마라탕': { name: '마라탕', unit: '인분', carbs: 40, calories: 800, glycemicIndex: 55, protein: 20, fat: 45, sodium: 2500 },
+  '떡볶이': { name: '떡볶이', unit: '인분', carbs: 110, calories: 600, glycemicIndex: 85, protein: 15, fat: 8, sodium: 1500 },
+  '냉면': { name: '냉면', unit: '그릇', carbs: 85, calories: 480, glycemicIndex: 72, protein: 15, fat: 5, sodium: 1800 },
+  '칼국수': { name: '칼국수', unit: '그릇', carbs: 75, calories: 450, glycemicIndex: 70, protein: 15, fat: 6, sodium: 1600 },
+  '우동': { name: '우동', unit: '그릇', carbs: 70, calories: 420, glycemicIndex: 75, protein: 12, fat: 4, sodium: 1700 },
+  '파스타': { name: '파스타', unit: '인분', carbs: 65, calories: 500, glycemicIndex: 55, protein: 18, fat: 15, sodium: 800 },
+  '스테이크': { name: '스테이크', unit: '인분', carbs: 0, calories: 450, glycemicIndex: 0, protein: 45, fat: 30, sodium: 600 },
+  '탕수육': { name: '탕수육', unit: '인분', carbs: 45, calories: 550, glycemicIndex: 65, protein: 20, fat: 28, sodium: 800 },
+  '볶음밥': { name: '볶음밥', unit: '인분', carbs: 75, calories: 520, glycemicIndex: 70, protein: 12, fat: 18, sodium: 900 },
+  '된장국': { name: '된장국', unit: '그릇', carbs: 8, calories: 60, glycemicIndex: 40, protein: 5, fat: 2, sodium: 800 },
+  '미역국': { name: '미역국', unit: '그릇', carbs: 5, calories: 80, glycemicIndex: 35, protein: 6, fat: 3, sodium: 700 },
+  '김치전': { name: '김치전', unit: '조각', carbs: 30, calories: 250, glycemicIndex: 60, protein: 5, fat: 12, sodium: 600 },
+  '만두': { name: '만두', unit: '개', carbs: 8, calories: 50, glycemicIndex: 65, protein: 3, fat: 2, sodium: 120 },
+  '계란후라이': { name: '계란후라이', unit: '개', carbs: 1, calories: 90, glycemicIndex: 0, protein: 6, fat: 7, sodium: 65 },
+  '달걀말이': { name: '달걀말이', unit: '조각', carbs: 2, calories: 70, glycemicIndex: 0, protein: 5, fat: 5, sodium: 100 },
+  '고구마': { name: '고구마', unit: '개', carbs: 30, calories: 130, glycemicIndex: 55, protein: 2, fat: 0, sodium: 15 },
+  '감자': { name: '감자', unit: '개', carbs: 25, calories: 110, glycemicIndex: 80, protein: 3, fat: 0, sodium: 10 },
+  '옥수수': { name: '옥수수', unit: '개', carbs: 20, calories: 100, glycemicIndex: 55, protein: 3, fat: 1, sodium: 5 },
+  '우유': { name: '우유', unit: '컵', carbs: 12, calories: 130, glycemicIndex: 30, protein: 8, fat: 7, sodium: 120 },
+  '요거트': { name: '요거트', unit: '컵', carbs: 15, calories: 100, glycemicIndex: 35, protein: 5, fat: 2, sodium: 60 },
+  '아이스크림': { name: '아이스크림', unit: '개', carbs: 25, calories: 200, glycemicIndex: 65, protein: 3, fat: 10, sodium: 50 },
+  '케이크': { name: '케이크', unit: '조각', carbs: 35, calories: 300, glycemicIndex: 70, protein: 4, fat: 15, sodium: 150 },
+  '과자': { name: '과자', unit: '봉지', carbs: 40, calories: 250, glycemicIndex: 75, protein: 2, fat: 12, sodium: 300 },
+  '초콜릿': { name: '초콜릿', unit: '조각', carbs: 15, calories: 110, glycemicIndex: 45, protein: 1, fat: 6, sodium: 10 },
+  '포도': { name: '포도', unit: '송이', carbs: 45, calories: 180, glycemicIndex: 50, protein: 1, fat: 0, sodium: 5 },
+  '수박': { name: '수박', unit: '조각', carbs: 12, calories: 50, glycemicIndex: 72, protein: 1, fat: 0, sodium: 2 },
+  '사이다': { name: '사이다', unit: '캔', carbs: 30, calories: 120, glycemicIndex: 65, protein: 0, fat: 0, sodium: 15 },
+  '콜라': { name: '콜라', unit: '캔', carbs: 35, calories: 140, glycemicIndex: 65, protein: 0, fat: 0, sodium: 10 },
+  '맥주': { name: '맥주', unit: '캔', carbs: 12, calories: 150, glycemicIndex: 85, protein: 1, fat: 0, sodium: 15 },
+  '소주': { name: '소주', unit: '병', carbs: 0, calories: 400, glycemicIndex: 0, protein: 0, fat: 0, sodium: 0 },
 };
 
 // 수량 표현 파서
@@ -124,7 +159,7 @@ export async function parseMealText(
         2. 수량이나 단위가 없으면 1인분을 기준으로 해.
         3. "혈당 120"과 같은 패턴이 있으면 glucoseValue에 숫자를 넣어.
         4. 문맥상 "공복", "식후 1시간" 등이 있으면 detectedMeasType을 정해줘. 없으면 "random".
-        5. 아내분을 대하듯 따뜻하고 부드러운 말투로 질문을 생성해줘.
+        5. 사용자를 대하듯 따뜻하고 다정한 말투로 질문을 생성해줘.
       `;
 
       const result = await model.generateContent(prompt);
