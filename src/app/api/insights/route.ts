@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Gemini API 설정
+// Gemma API 설정 (이전 Gemini 기반)
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 const genAI = new GoogleGenerativeAI(apiKey);
 
@@ -10,10 +10,10 @@ export async function POST(req: Request) {
     const { userId, recentMeals, averageGlucose, isDemo } = await req.json();
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'Gemini API key is missing' }, { status: 500 });
+      return NextResponse.json({ error: 'Gemma API key is missing' }, { status: 500 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemma-4' });
 
     const prompt = `
       당신은 당뇨 예방 및 혈당 관리를 돕는 'GLUV' 앱의 따뜻하고 다정한 건강 비서입니다.

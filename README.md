@@ -20,7 +20,7 @@
 ### 3. 📊 정밀 데이터 리포트 & 맞춤 인사이트
 - **현장감 있는 대시보드**: 일/주/월별 혈당 흐름과 오늘 먹은 음식 정보를 깔끔하게 조합합니다.
 - **개인별 데이터 격리**: Firebase Auth를 통해 로그인한 데이터는 타인과 절대 섞이지 않는 나만의 건강 수첩이 됩니다.
-- **Google Gemini 인사이트**: 나의 며칠간 활동과 혈당 흐름을 파악하여 마치 헬스 트레이너처럼 실시간 조언 및 피드백 카드를 발행합니다.
+- **Google Gemma 4 인사이트**: 나의 며칠간 활동과 혈당 흐름을 파악하여 마치 헬스 트레이너처럼 실시간 조언 및 피드백 카드를 발행합니다.
 
 ### 4. 📱 PWA 지원 (홈 화면에 설치)
 - 앱스토어 설치 없이 브라우저에서 '홈 화면에 추가'하여 앱처럼 사용할 수 있습니다.
@@ -31,7 +31,7 @@
 
 - **Frontend**: Next.js 15 (App Router) + TypeScript
 - **Styling**: Vanilla CSS + Tailwind (Custom Warm Palette)
-- **AI (Hybrid)**: OpenAI API (Parser 기능 담당), Google Gemini 1.5 Flash (Insight 기능 담당)
+- **AI (Hybrid)**: OpenAI API (Parser 기능 담당), Google Gemma 4 (Insight 기능 담당)
 - **Backend**: Firebase Firestore & Firebase Authentication
 - **Voice Engine**: Web Speech API (Continuous Recognition)
 - **Charts**: Recharts (Custom Styled)

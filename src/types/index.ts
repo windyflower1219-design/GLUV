@@ -135,6 +135,7 @@ export interface VoiceParseResult {
   parsedFoods: Partial<FoodItem>[];
   glucoseValue?: number;
   detectedMeasType?: MeasurementType;
+  detectedTime?: string;
   confidenceScore: number;
   needsClarification: boolean;
   clarificationQuestion?: string;

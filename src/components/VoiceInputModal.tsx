@@ -29,8 +29,13 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
       const result = await parseMealText(text);
       setParseResult(result);
       setTextInput(text);
-      if (result.glucoseValue) {
+      if (result.glucoseValue !== undefined) {
         setEditedGlucose(result.glucoseValue);
+      }
+      if (result.detectedTime) {
+        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+        const todayStr = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+        setSelectedTime(`${todayStr}T${result.detectedTime}`);
       }
     } catch (err) {
       console.error(err);
@@ -48,6 +53,14 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
     try {
       const result = await parseMealText(textInput);
       setParseResult(result);
+      if (result.glucoseValue !== undefined) {
+        setEditedGlucose(result.glucoseValue);
+      }
+      if (result.detectedTime) {
+        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+        const todayStr = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+        setSelectedTime(`${todayStr}T${result.detectedTime}`);
+      }
     } finally {
       setIsParsing(false);
     }
@@ -248,16 +261,59 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
             
             <div className="space-y-3 mb-6">
               {parseResult.parsedFoods.map((food, i) => (
-                <div key={i} className="bg-white border border-gray-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-rose-100 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-gray-50 font-bold text-sm flex items-center justify-center text-gray-400 group-hover:bg-rose-50 group-hover:text-rose-400 transition-colors">
-                      {i + 1}
+                <div key={i} className="bg-white border border-gray-100 p-4 rounded-3xl shadow-sm group hover:border-rose-100 transition-colors">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-gray-50 flex-shrink-0 font-bold text-sm flex items-center justify-center text-gray-400 group-hover:bg-rose-50 group-hover:text-rose-400 transition-colors">
+                        {i + 1}
+                      </div>
+                      <div className="flex-[2]">
+                        <input
+                           type="text"
+                           value={food.name || ''}
+                           onChange={(e) => {
+                             if (!parseResult) return;
+                             const newFoods = [...parseResult.parsedFoods];
+                             newFoods[i] = { ...newFoods[i], name: e.target.value };
+                             setParseResult({ ...parseResult, parsedFoods: newFoods });
+                           }}
+                           className="font-black text-gray-800 text-sm bg-transparent outline-none w-full border-b border-dashed border-transparent hover:border-gray-200 focus:border-rose-200 transition-colors"
+                        />
+                      </div>
+                      <div className="flex-1 flex gap-1 items-baseline justify-end">
+                        <input
+                           type="number"
+                           value={food.quantity || 0}
+                           onChange={(e) => {
+                             if (!parseResult) return;
+                             const newFoods = [...parseResult.parsedFoods];
+                             newFoods[i] = { ...newFoods[i], quantity: parseFloat(e.target.value) || 0 };
+                             setParseResult({ ...parseResult, parsedFoods: newFoods });
+                           }}
+                           className="font-bold text-gray-800 text-sm bg-transparent outline-none w-12 text-right border-b border-dashed border-transparent hover:border-gray-200 focus:border-rose-200 transition-colors"
+                        />
+                        <span className="text-xs font-bold text-gray-400">{food.unit || '인분'}</span>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-black text-gray-800 text-sm">{food.name}</p>
-                      <p className="text-[10px] font-bold text-gray-400 mt-0.5">
-                        {food.quantity}{food.unit} · {food.calories}kcal · 탄수 {food.carbs}g
-                      </p>
+                    <div className="flex gap-4 pl-[52px] flex-wrap items-center">
+                      <div className="flex items-center gap-1 text-[10px]">
+                        <span className="text-gray-400 font-bold">칼로리(kcal)</span>
+                        <input type="number" value={food.calories || 0} onChange={(e) => {
+                             if (!parseResult) return;
+                             const newFoods = [...parseResult.parsedFoods];
+                             newFoods[i] = { ...newFoods[i], calories: parseFloat(e.target.value) || 0 };
+                             setParseResult({ ...parseResult, parsedFoods: newFoods });
+                           }} className="w-12 font-black text-rose-500 outline-none bg-transparent border-b border-dashed border-transparent hover:border-gray-200 focus:border-rose-200 text-right" />
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px]">
+                        <span className="text-gray-400 font-bold">탄수(g)</span>
+                        <input type="number" value={food.carbs || 0} onChange={(e) => {
+                             if (!parseResult) return;
+                             const newFoods = [...parseResult.parsedFoods];
+                             newFoods[i] = { ...newFoods[i], carbs: parseFloat(e.target.value) || 0 };
+                             setParseResult({ ...parseResult, parsedFoods: newFoods });
+                           }} className="w-12 font-black text-indigo-500 outline-none bg-transparent border-b border-dashed border-transparent hover:border-gray-200 focus:border-indigo-200 text-right" />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -134,7 +134,7 @@ export async function parseMealText(
   if (useOpenAI) {
     try {
       const prompt = `
-        사용자의 음성 입력에서 음식 정보와 혈당 수치를 추출해줘.
+        사용자의 음성 입력에서 음식 정보, 혈당 수치, 측정 시점을 추출해줘.
         입력: "${voiceText}"
 
         다음 JSON 형식으로만 응답해:
@@ -154,6 +154,7 @@ export async function parseMealText(
           ],
           "glucoseValue": 혈당수치(숫자, 없으면 null),
           "detectedMeasType": "fasting" | "postmeal_30m" | "postmeal_1h" | "postmeal_2h" | "random",
+          "detectedTime": "시간을 나타내는 문맥(예: '아침에', '점심', '저녁 7시')이 있으면 24시간 형식 HH:mm 으로 추정해줘 (아침이면 08:00, 점심이면 12:30, 저녁 7시면 19:00 등). 따로 언급이 없으면 null",
           "needsClarification": 모호한 경우 true,
           "clarificationQuestion": "모호한 경우 사용자에게 던질 친절한 질문"
         }
@@ -163,7 +164,8 @@ export async function parseMealText(
         2. 수량이나 단위가 없으면 1인분을 기준으로 해.
         3. "혈당 120"과 같은 패턴이 있으면 glucoseValue에 숫자를 넣어.
         4. 문맥상 "공복", "식후 1시간" 등이 있으면 detectedMeasType을 정해줘. 없으면 "random".
-        5. 사용자를 대하듯 따뜻하고 다정한 말투로 질문을 생성해줘.
+        5. "아침에", "점심에", "어제 저녁" 등 시간적 맥락을 파악해서 detectedTime 에 HH:mm 형태로 넣어줘. (혈당/식단 시간을 사용자가 명시했다면 우선 존중)
+        6. 사용자를 대하듯 따뜻하고 다정한 말투로 질문을 생성해줘.
       `;
 
       const response = await openai.chat.completions.create({
@@ -183,6 +185,7 @@ export async function parseMealText(
         })),
         glucoseValue: data.glucoseValue || undefined,
         detectedMeasType: (data.detectedMeasType as MeasurementType) || 'random',
+        detectedTime: data.detectedTime || undefined,
         confidenceScore: 0.9,
         needsClarification: !!data.needsClarification,
         clarificationQuestion: data.clarificationQuestion,

@@ -19,7 +19,7 @@ Next.js App Router의 라우트 컨벤션을 따릅니다. 전체 페이지는 `
 *   `/dashboard`: 홈 대시보드 화면. 전체 요약 정보 표시
 *   `/glucose`: 혈당 기록 및 트렌드 확인 (수동 시간 입력 지원)
 *   `/meals`: 식사(식단) 기록 페이지
-*   `/insights`: Gemini AI 분석 기반 실시간 생성 맞춤 조언 페이지 (`/api/insights` 연동)
+*   `/insights`: Gemma 4 AI 분석 기반 실시간 생성 맞춤 조언 페이지 (`/api/insights` 연동)
 *   `layout.tsx`: 애플리케이션의 뼈대(Root Layout). PWA 모바일 대응 화면 레이아웃 (`AppLayout`) 및 상태 관리를 위한 `<AuthProvider>`, `<VoiceInputProvider>`를 주입합니다.
 
 ### 3.2. Components (`src/components/`)

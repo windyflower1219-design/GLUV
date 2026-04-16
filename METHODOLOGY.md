@@ -16,7 +16,7 @@ GLUV 프로젝트는 다수의 특화된 AI 에이전트가 서로 협력하고 
 - **주요 임무**: 실제 서비스 로직 구현, UI/UX 설계 및 데이터베이스 스키마 제안.
 - **핵심 역할**: 사용자의 요구사항을 기술적 코드로 변환하며, 기능적인 완성도를 높이는 데 집중합니다.
 
-### 3. 🔍 Gemini (Discriminator)
+### 3. 🔍 Gemma 4 (Discriminator)
 - **주요 임무**: 비판적 시각에서의 UX 문제점 도출, 논리적 결함 발견 및 엣지 케이스 점검.
 - **핵심 역할**: Generator가 작성한 결과물에 대해 현실적인 제약 조건이나 사용자 불편 요소(15개 이상의 UX 허들 등)를 지적하여 완성도를 강제합니다.
 
@@ -28,7 +28,7 @@ GLUV 프로젝트는 다수의 특화된 AI 에이전트가 서로 협력하고 
 
 ### 🏁 Round 1: MVP 기초 설계 및 취약점 도출
 *   **Claude (Generator)**: 서비스의 근간이 되는 5개 핵심 컬렉션(User, Meal, Glucose, Preference, Insight) 중심의 Firestore 기반 데이터 스키마를 설계하고 제안했습니다.
-*   **Gemini (Discriminator) 의 비판 (15개 항목)**:
+*   **Gemma 4 (Discriminator) 의 비판 (15개 항목)**:
     - **환경적 제약**: 지하철이나 식당(70dB 이상 소음)에서의 음성 인식 저하 및 공공장소 사용의 민망함 지적.
     - **한국적 맥락**: 한국형 복합 메뉴(백반 등)의 단일 입력 처리 불가 및 '조금', '한 대접' 등 모호한 양 표현 파싱 실패 가능성 경고.
     - **데이터 마찰**: 수동 혈당 입력의 귀찮음으로 인한 데이터 단절 및 식후 기록 망각 확률(평균 45분 지연) 지적.
@@ -42,7 +42,7 @@ GLUV 프로젝트는 다수의 특화된 AI 에이전트가 서로 협력하고 
 *   **Claude (Generator)**: Orchestrator의 지시를 바탕으로 `matchMealToGlucose`, `predictGlucoseResponse` 등 4종의 핵심 분석 알고리즘 구현.
 
 ### 💎 Round 3: 최종 최적화 및 접근성 검증
-*   **Gemini (Discriminator) 의 품질 검증**:
+*   **Gemma 4 (Discriminator) 의 품질 검증**:
     - **성능**: Lighthouse Performance 점수 90점 이상 달성 여부 확인.
     - **접근성/사용성**: WCAG 2.1 AA 표준 준수 및 모바일 한 손 사용성(One-Hand Usability) 100% 커버리지 검증.
     - **실행 가능성**: 인사이트가 단순 정보 전달을 넘어 실제 행동(Actionable)으로 이어지는지 점검. 
