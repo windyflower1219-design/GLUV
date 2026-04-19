@@ -152,14 +152,18 @@ export async function parseMealText(
 
   // --- Local Fallback Parser ---
   const foundFoods = findFoodInText(voiceText);
-  let glucoseMatch = voiceText.match(/혈당\s*(\d{2,3})/);
+  // 한국어 조사(이/은/가/는/의)와 중간 단어("수치")를 유연하게 처리
+  // 예: "혈당이 140", "혈당은 135", "혈당 수치가 110", "혈당 120", "혈당 180이야"
+  let glucoseMatch = voiceText.match(/혈당[은이가는의]?\s*(?:수치[가는은이]?\s*)?(\d{2,3})/);
   if (!glucoseMatch) glucoseMatch = voiceText.match(/(\d{2,3})\s*나왔어/);
   const glucoseValue = glucoseMatch ? parseInt(glucoseMatch[1]) : undefined;
-  
+
+  // 측정 타입 감지: 더 구체적인 패턴을 먼저 검사해야 함
   let detectedMeasType: MeasurementType = 'random';
   if (voiceText.includes('공복')) detectedMeasType = 'fasting';
-  else if (voiceText.includes('식후 2시간')) detectedMeasType = 'postmeal_2h';
-  else if (voiceText.includes('식후 1시간') || voiceText.includes('식후')) detectedMeasType = 'postmeal_1h';
+  else if (voiceText.includes('식후 2시간') || voiceText.includes('식후2시간')) detectedMeasType = 'postmeal_2h';
+  else if (voiceText.includes('식후 30분') || voiceText.includes('식후30분')) detectedMeasType = 'postmeal_30m';
+  else if (voiceText.includes('식후 1시간') || voiceText.includes('식후1시간') || voiceText.includes('식후')) detectedMeasType = 'postmeal_1h';
 
   // 간단한 시간 맥락 파싱 (아침, 점심, 저녁)
   let detectedTime: string | undefined;
