@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { saveGlucose, getGlucoseReadings } from '@/lib/firebase/firestore';
+import {
+  saveGlucose,
+  getGlucoseReadings,
+  updateGlucose,
+  deleteGlucose,
+} from '@/lib/firebase/firestore';
 import type { GlucoseReading, GlucoseChartData } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
@@ -41,7 +46,7 @@ export function useGlucoseData() {
       measurementType: type,
       linkedMealId,
     };
-    
+
     try {
       console.log('Attempting to save glucose reading to Firebase...', readingData);
       const docId = await saveGlucose(readingData);
@@ -58,10 +63,41 @@ export function useGlucoseData() {
     }
   }, [userId, fetchReadings]);
 
+  const editReading = useCallback(async (
+    id: string,
+    updates: Partial<Omit<GlucoseReading, 'id'>>,
+  ) => {
+    setIsSubmitting(true);
+    try {
+      await updateGlucose(id, updates);
+      await fetchReadings(false);
+      return true;
+    } catch (error) {
+      console.error('Failed to update glucose reading:', error);
+      throw error;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [fetchReadings]);
+
+  const removeReading = useCallback(async (id: string) => {
+    setIsSubmitting(true);
+    try {
+      await deleteGlucose(id);
+      await fetchReadings(false);
+      return true;
+    } catch (error) {
+      console.error('Failed to delete glucose reading:', error);
+      throw error;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [fetchReadings]);
+
   const getChartData = useCallback((): GlucoseChartData[] => {
     const cutoff = new Date();
     cutoff.setHours(cutoff.getHours() - 24);
-    
+
     return readings
       .filter(r => r.timestamp >= cutoff)
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
@@ -90,6 +126,8 @@ export function useGlucoseData() {
     averageGlucose,
     timeInRange,
     addReading,
+    editReading,
+    removeReading,
     getChartData,
     fetchReadings,
   };

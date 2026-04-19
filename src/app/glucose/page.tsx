@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Plus, Activity, Target, Heart, 
-  Calendar, ChevronRight, Loader2, Clock
+import {
+  Plus, Activity, Target, Heart,
+  Calendar, ChevronRight, Loader2, Clock,
+  Pencil, Trash2, Check, X
 } from '@/components/common/Icons';
 import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
@@ -58,9 +59,64 @@ export default function GlucosePage() {
     return (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
   });
 
-  const { readings, loading, isSubmitting, currentGlucose, averageGlucose, timeInRange, addReading, getChartData, fetchReadings } = useGlucoseData();
+  const {
+    readings, loading, isSubmitting, currentGlucose, averageGlucose, timeInRange,
+    addReading, editReading, removeReading, getChartData, fetchReadings,
+  } = useGlucoseData();
   const chartData = getChartData();
   const weeklyAnalysis = analyzeWeeklyTrend(readings);
+
+  // 편집/삭제 상태
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+  const [editType, setEditType] = useState<GlucoseReading['measurementType']>('random');
+  const [editTime, setEditTime] = useState<string>('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const startEdit = (reading: GlucoseReading) => {
+    const tzoffset = reading.timestamp.getTimezoneOffset() * 60000;
+    const isoLocal = new Date(reading.timestamp.getTime() - tzoffset).toISOString().slice(0, 16);
+    setEditingId(reading.id);
+    setEditValue(String(reading.value));
+    setEditType(reading.measurementType);
+    setEditTime(isoLocal);
+    setConfirmDeleteId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue('');
+    setEditTime('');
+  };
+
+  const saveEdit = async (reading: GlucoseReading) => {
+    const val = parseInt(editValue);
+    if (isNaN(val) || val < 20 || val > 600) {
+      alert('혈당 값은 20~600 mg/dL 범위여야 합니다.');
+      return;
+    }
+    try {
+      await editReading(reading.id, {
+        value: val,
+        measurementType: editType,
+        timestamp: editTime ? new Date(editTime) : reading.timestamp,
+      });
+      cancelEdit();
+      window.dispatchEvent(new CustomEvent('record-saved'));
+    } catch (err: any) {
+      alert(`수정에 실패했습니다: ${err?.message || err}`);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await removeReading(id);
+      setConfirmDeleteId(null);
+      window.dispatchEvent(new CustomEvent('record-saved'));
+    } catch (err: any) {
+      alert(`삭제에 실패했습니다: ${err?.message || err}`);
+    }
+  };
 
   useEffect(() => {
     // 전역 저장 이벤트 리스너
@@ -224,28 +280,144 @@ export default function GlucosePage() {
               const isHigh = reading.value > 140;
               const isLow = reading.value < 70;
               const type = MEASUREMENT_TYPES[reading.measurementType];
-              
+              const isEditing = editingId === reading.id;
+              const isConfirmingDelete = confirmDeleteId === reading.id;
+
               return (
-                <div key={reading.id} className="bg-white rounded-3xl p-4 shadow-sm border border-[var(--color-border)] flex items-center gap-4 group hover:border-indigo-100 transition-colors">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner border border-white ${
-                    isHigh ? 'bg-rose-50 text-rose-500' : isLow ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
-                  }`}>
-                    {type.emoji}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-black text-gray-800">{type.label}</p>
-                    <p className="text-[10px] font-bold text-gray-400 mt-0.5">
-                      {reading.timestamp.toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-xl font-black ${
-                      isHigh ? 'text-[var(--color-danger)]' : isLow ? 'text-[var(--color-warning)]' : 'text-[var(--color-success)]'
+                <div
+                  key={reading.id}
+                  className={`bg-white rounded-3xl p-4 shadow-sm border group transition-colors ${
+                    isEditing ? 'border-indigo-200' : 'border-[var(--color-border)] hover:border-indigo-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner border border-white ${
+                      isHigh ? 'bg-rose-50 text-rose-500' : isLow ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
                     }`}>
-                      {reading.value}
-                    </p>
-                    <p className="text-[9px] font-black text-gray-300">mg/dL</p>
+                      {type.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black text-gray-800">{type.label}</p>
+                      <p className="text-[10px] font-bold text-gray-400 mt-0.5">
+                        {reading.timestamp.toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-xl font-black ${
+                        isHigh ? 'text-[var(--color-danger)]' : isLow ? 'text-[var(--color-warning)]' : 'text-[var(--color-success)]'
+                      }`}>
+                        {reading.value}
+                      </p>
+                      <p className="text-[9px] font-black text-gray-300">mg/dL</p>
+                    </div>
+                    {!isEditing && !isConfirmingDelete && (
+                      <div className="flex items-center gap-1 ml-1">
+                        <button
+                          onClick={() => startEdit(reading)}
+                          className="p-2 text-indigo-300 hover:text-indigo-500 transition-colors"
+                          aria-label="수정"
+                          title="수정"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => { setConfirmDeleteId(reading.id); setEditingId(null); }}
+                          className="p-2 text-rose-300 hover:text-rose-500 transition-colors"
+                          aria-label="삭제"
+                          title="삭제"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
+
+                  {/* 편집 폼 */}
+                  {isEditing && (
+                    <div className="mt-4 pt-4 border-t border-gray-50 space-y-3 animate-fade-in">
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="flex flex-col gap-1">
+                          <span className="text-[9px] font-black text-gray-400">혈당 (mg/dL)</span>
+                          <input
+                            type="number"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            className="w-full bg-white border border-gray-100 rounded-lg px-2 py-2 text-sm font-black text-gray-700 outline-none focus:border-indigo-300"
+                            min={20}
+                            max={600}
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-[9px] font-black text-gray-400">측정 시간</span>
+                          <input
+                            type="datetime-local"
+                            value={editTime}
+                            onChange={(e) => setEditTime(e.target.value)}
+                            className="w-full bg-white border border-gray-100 rounded-lg px-2 py-2 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300"
+                          />
+                        </label>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-gray-400 mb-2">측정 시점</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(Object.entries(MEASUREMENT_TYPES) as Array<[GlucoseReading['measurementType'], { label: string; order: number; emoji: string }]>)
+                            .sort((a, b) => a[1].order - b[1].order)
+                            .map(([key, { label, emoji }]) => (
+                              <button
+                                key={key}
+                                onClick={() => setEditType(key)}
+                                className={`py-2 px-2 rounded-xl text-[11px] font-black transition-all border flex items-center justify-center gap-1 ${
+                                  editType === key
+                                    ? 'bg-gray-800 text-white border-gray-800'
+                                    : 'bg-white text-gray-400 border-gray-100'
+                                }`}
+                              >
+                                <span>{emoji}</span> {label}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={cancelEdit}
+                          disabled={isSubmitting}
+                          className="flex items-center gap-1 text-[11px] font-black text-gray-500 bg-gray-100 px-3 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          <X size={12} /> 취소
+                        </button>
+                        <button
+                          onClick={() => saveEdit(reading)}
+                          disabled={isSubmitting || !editValue}
+                          className="flex items-center gap-1 text-[11px] font-black text-white bg-indigo-500 px-3 py-2 rounded-xl active:scale-95 transition-all shadow-sm shadow-indigo-100 disabled:opacity-50"
+                        >
+                          {isSubmitting ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                          저장
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 삭제 확인 */}
+                  {isConfirmingDelete && (
+                    <div className="mt-4 pt-4 border-t border-gray-50 flex items-center gap-2 justify-end animate-fade-in bg-rose-50/40 -mx-4 -mb-4 px-4 py-3 rounded-b-3xl">
+                      <p className="text-xs font-bold text-rose-500 mr-auto">이 기록을 삭제할까요?</p>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        disabled={isSubmitting}
+                        className="text-[11px] font-black text-gray-500 bg-gray-100 px-3 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                      >
+                        취소
+                      </button>
+                      <button
+                        onClick={() => handleDelete(reading.id)}
+                        disabled={isSubmitting}
+                        className="flex items-center gap-1 text-[11px] font-black text-white bg-rose-500 px-3 py-2 rounded-xl active:scale-95 transition-all shadow-sm shadow-rose-100 disabled:opacity-50"
+                      >
+                        {isSubmitting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                        삭제
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}

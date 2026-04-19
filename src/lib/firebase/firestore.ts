@@ -122,6 +122,36 @@ export const deleteMeal = async (mealId: string) => {
   }
 };
 
+export const updateMeal = async (mealId: string, updates: Partial<Omit<Meal, 'id'>>) => {
+  // Firestore 업데이트용 페이로드 (timestamp가 포함된 경우 Timestamp로 변환)
+  const payload: any = { ...updates };
+  if (updates.timestamp instanceof Date) {
+    payload.timestamp = Timestamp.fromDate(updates.timestamp);
+  }
+
+  try {
+    if (!mealId.startsWith('local_')) {
+      await withTimeout(updateDoc(doc(db, 'meals', mealId), payload));
+    }
+  } catch (error) {
+    console.warn('Firebase updateMeal error, falling back to localStorage:', error);
+  } finally {
+    // 로컬 캐시에 같은 id가 있으면 거기도 반영
+    if (typeof window !== 'undefined') {
+      const meals = getLocalData('gluv_meals');
+      const idx = meals.findIndex((m: any) => m.id === mealId);
+      if (idx >= 0) {
+        const merged = { ...meals[idx], ...updates };
+        if (updates.timestamp instanceof Date) {
+          merged.timestamp = (updates.timestamp as Date).toISOString();
+        }
+        meals[idx] = merged;
+        saveLocalData('gluv_meals', meals);
+      }
+    }
+  }
+};
+
 // =====================
 // 혈당 관련
 // =====================
@@ -172,13 +202,60 @@ export const getGlucoseReadings = async (userId: string, hours: number = 24) => 
     const filteredLocal = local
       .map((r: any) => ({ ...r, timestamp: new Date(r.timestamp) }))
       .filter((r: GlucoseReading) => r.userId === userId && r.timestamp >= cutoff);
-      
+
     // id 기준으로 중복 제거 후 합침
     const fbIds = new Set(fbReadings.map((r: GlucoseReading) => r.id));
     const uniqueLocal = filteredLocal.filter((r: GlucoseReading) => !fbIds.has(r.id));
 
     return [...fbReadings, ...uniqueLocal].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
-  
+
   return fbReadings;
+};
+
+export const deleteGlucose = async (readingId: string) => {
+  try {
+    if (!readingId.startsWith('local_')) {
+      await withTimeout(deleteDoc(doc(db, 'glucose_readings', readingId)));
+    }
+  } catch (error) {
+    console.warn('Firebase deleteGlucose error:', error);
+  } finally {
+    if (typeof window !== 'undefined') {
+      const readings = getLocalData('gluv_glucose');
+      const filtered = readings.filter((r: any) => r.id !== readingId);
+      saveLocalData('gluv_glucose', filtered);
+    }
+  }
+};
+
+export const updateGlucose = async (
+  readingId: string,
+  updates: Partial<Omit<GlucoseReading, 'id'>>
+) => {
+  const payload: any = { ...updates };
+  if (updates.timestamp instanceof Date) {
+    payload.timestamp = Timestamp.fromDate(updates.timestamp);
+  }
+
+  try {
+    if (!readingId.startsWith('local_')) {
+      await withTimeout(updateDoc(doc(db, 'glucose_readings', readingId), payload));
+    }
+  } catch (error) {
+    console.warn('Firebase updateGlucose error:', error);
+  } finally {
+    if (typeof window !== 'undefined') {
+      const readings = getLocalData('gluv_glucose');
+      const idx = readings.findIndex((r: any) => r.id === readingId);
+      if (idx >= 0) {
+        const merged = { ...readings[idx], ...updates };
+        if (updates.timestamp instanceof Date) {
+          merged.timestamp = (updates.timestamp as Date).toISOString();
+        }
+        readings[idx] = merged;
+        saveLocalData('gluv_glucose', readings);
+      }
+    }
+  }
 };

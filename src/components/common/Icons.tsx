@@ -1,10 +1,11 @@
 import React from 'react';
-import { 
-  Mic as LucideMic, 
+import {
+  Mic as LucideMic,
   Sparkles as LucideSparkles,
   Search, Bell, Plus, ChevronRight, ChevronDown, Trash2,
   Calendar, Activity, Target, Heart, Flame, Utensils,
-  Moon, Sun, TrendingUp, TrendingDown, Minus, Camera, Filter, Award, Zap, Coffee, Loader2, Clock
+  Moon, Sun, TrendingUp, TrendingDown, Minus, Camera, Filter, Award, Zap, Coffee, Loader2, Clock,
+  LogOut, Pencil, X, Check, Save
 } from 'lucide-react';
 
 interface IconProps {
@@ -33,8 +34,9 @@ export const SparklesIcon = ({ size = 24, className = '', strokeWidth = 3 }: Ico
 );
 
 // Re-export Lucide Icons for consistency
-export { 
+export {
   Search, Bell, Plus, ChevronRight, ChevronDown, Trash2,
   Calendar, Activity, Target, Heart, Flame, Utensils,
-  Moon, Sun, TrendingUp, TrendingDown, Minus, Camera, Filter, Award, Zap, Coffee, Loader2, Clock
+  Moon, Sun, TrendingUp, TrendingDown, Minus, Camera, Filter, Award, Zap, Coffee, Loader2, Clock,
+  LogOut, Pencil, X, Check, Save
 };

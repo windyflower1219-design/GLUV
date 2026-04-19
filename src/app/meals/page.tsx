@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { 
-  Plus, Camera, Trash2, ChevronDown, 
-  Search, MicIcon, Loader2 
+import {
+  Plus, Camera, Trash2, ChevronDown,
+  Search, MicIcon, Loader2, Pencil, Check, X
 } from '@/components/common/Icons';
 import PageHeader from '@/components/common/PageHeader';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
-import { saveMeal, getMeals, deleteMeal, saveGlucose } from '@/lib/firebase/firestore';
+import { saveMeal, getMeals, deleteMeal, updateMeal, saveGlucose } from '@/lib/firebase/firestore';
 import { useVoiceInputContext } from '@/context/VoiceInputContext';
 import { useUnifiedStorage } from '@/lib/hooks/useUnifiedStorage';
 import type { FoodItem, Meal, MealType, MeasurementType } from '@/types';
@@ -39,6 +39,57 @@ export default function MealsPage() {
   const { openVoiceInput, isSubmitting, setIsSubmitting } = useVoiceInputContext();
   const { saveUnifiedRecord } = useUnifiedStorage();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<FoodItem[]>([]);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const startEditing = (meal: Meal) => {
+    // 깊은 복사를 해야 원본을 건드리지 않음
+    setEditDraft(meal.parsedFoods.map(f => ({ ...f })));
+    setEditingId(meal.id);
+    setDeletingId(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditDraft([]);
+  };
+
+  const updateDraftField = (idx: number, field: keyof FoodItem, value: string) => {
+    setEditDraft(prev => {
+      const next = [...prev];
+      const numericFields: (keyof FoodItem)[] = ['quantity', 'carbs', 'calories', 'glycemicIndex', 'protein', 'fat', 'sodium'];
+      const parsed: any = numericFields.includes(field)
+        ? (value === '' ? 0 : Number(value))
+        : value;
+      next[idx] = { ...next[idx], [field]: parsed };
+      return next;
+    });
+  };
+
+  const saveEdit = async (meal: Meal) => {
+    setIsSavingEdit(true);
+    try {
+      const foods = editDraft;
+      const totalCarbs = foods.reduce((s, f) => s + (Number(f.carbs) || 0) * (Number(f.quantity) || 1), 0);
+      const totalCalories = foods.reduce((s, f) => s + (Number(f.calories) || 0) * (Number(f.quantity) || 1), 0);
+      const prediction = predictGlucoseResponse(foods, 100);
+      await updateMeal(meal.id, {
+        parsedFoods: foods,
+        totalCarbs,
+        totalCalories,
+        glucotypeScore: prediction.riskLevel,
+      });
+      await fetchMeals(false);
+      setEditingId(null);
+      setEditDraft([]);
+      window.dispatchEvent(new CustomEvent('record-saved'));
+    } catch (err: any) {
+      alert(`수정에 실패했습니다: ${err?.message || err}`);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const fetchMeals = useCallback(async (showLoading = true) => {
     if (showLoading) setIsInitialLoading(true);
@@ -240,50 +291,146 @@ export default function MealsPage() {
                             <p className="text-[10px] font-bold text-gray-400 mb-1 italic">반응 확인:</p>
                             <p className="text-xs font-bold text-gray-600 leading-relaxed">"{meal.rawVoiceInput}"</p>
                           </div>
-                          
-                          <div className="space-y-2">
-                            {meal.parsedFoods.map((f, i) => (
-                              <div key={i} className="flex items-center justify-between p-2 rounded-xl border border-gray-50">
-                                <div className="flex flex-col">
-                                  <span className="text-xs font-bold text-gray-700">{f.name}</span>
-                                  <span className="text-[10px] text-gray-400">{f.quantity}{f.unit}</span>
+
+                          {editingId === meal.id ? (
+                            // 수정 모드
+                            <div className="space-y-2">
+                              {editDraft.map((f, i) => (
+                                <div key={i} className="p-3 rounded-2xl border border-indigo-100 bg-indigo-50/30 space-y-2">
+                                  <input
+                                    type="text"
+                                    value={f.name}
+                                    onChange={(e) => updateDraftField(i, 'name', e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-full bg-white border border-gray-100 rounded-xl px-3 py-2 text-xs font-black text-gray-700 outline-none focus:border-indigo-300"
+                                    placeholder="음식 이름"
+                                  />
+                                  <div className="grid grid-cols-4 gap-2">
+                                    <label className="flex flex-col gap-1">
+                                      <span className="text-[9px] font-black text-gray-400">수량</span>
+                                      <input
+                                        type="number"
+                                        value={f.quantity}
+                                        onChange={(e) => updateDraftField(i, 'quantity', e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300"
+                                        min={0}
+                                      />
+                                    </label>
+                                    <label className="flex flex-col gap-1">
+                                      <span className="text-[9px] font-black text-gray-400">단위</span>
+                                      <input
+                                        type="text"
+                                        value={f.unit}
+                                        onChange={(e) => updateDraftField(i, 'unit', e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300"
+                                      />
+                                    </label>
+                                    <label className="flex flex-col gap-1">
+                                      <span className="text-[9px] font-black text-gray-400">kcal</span>
+                                      <input
+                                        type="number"
+                                        value={f.calories}
+                                        onChange={(e) => updateDraftField(i, 'calories', e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300"
+                                        min={0}
+                                      />
+                                    </label>
+                                    <label className="flex flex-col gap-1">
+                                      <span className="text-[9px] font-black text-gray-400">탄수(g)</span>
+                                      <input
+                                        type="number"
+                                        value={f.carbs}
+                                        onChange={(e) => updateDraftField(i, 'carbs', e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300"
+                                        min={0}
+                                      />
+                                    </label>
+                                  </div>
                                 </div>
-                                <div className="text-right">
-                                  <span className="text-[10px] font-black text-gray-500">{f.calories} kcal</span>
-                                  <br/>
-                                  <span className="text-[9px] font-bold text-gray-400">탄수 {f.carbs}g</span>
-                                </div>
+                              ))}
+
+                              <div className="flex gap-2 justify-end pt-1">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); cancelEditing(); }}
+                                  disabled={isSavingEdit}
+                                  className="flex items-center gap-1 text-[11px] font-black text-gray-500 bg-gray-100 px-3 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                  <X size={12} /> 취소
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); saveEdit(meal); }}
+                                  disabled={isSavingEdit}
+                                  className="flex items-center gap-1 text-[11px] font-black text-white bg-indigo-500 px-3 py-2 rounded-xl active:scale-95 transition-all shadow-sm shadow-indigo-100 disabled:opacity-50"
+                                >
+                                  {isSavingEdit ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                  저장
+                                </button>
                               </div>
-                            ))}
-                          </div>
-                          
-                          {/* 삭제 확인 인라인 UI */}
-                          {deletingId === meal.id ? (
-                            <div className="self-end flex items-center gap-2 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2 animate-fade-in">
-                              <p className="text-xs font-bold text-rose-500">정말 삭제할까요?</p>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDelete(meal.id); }}
-                                className="text-[10px] font-black text-white bg-rose-400 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
-                              >
-                                삭제
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setDeletingId(null); }}
-                                className="text-[10px] font-black text-gray-500 bg-gray-100 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
-                              >
-                                취소
-                              </button>
                             </div>
                           ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeletingId(meal.id);
-                              }}
-                              className="self-end p-2 text-rose-300 hover:text-rose-500 transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            // 보기 모드
+                            <div className="space-y-2">
+                              {meal.parsedFoods.map((f, i) => (
+                                <div key={i} className="flex items-center justify-between p-2 rounded-xl border border-gray-50">
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-bold text-gray-700">{f.name}</span>
+                                    <span className="text-[10px] text-gray-400">{f.quantity}{f.unit}</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-[10px] font-black text-gray-500">{f.calories} kcal</span>
+                                    <br/>
+                                    <span className="text-[9px] font-bold text-gray-400">탄수 {f.carbs}g</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* 액션 버튼들 */}
+                          {editingId !== meal.id && (
+                            deletingId === meal.id ? (
+                              <div className="self-end flex items-center gap-2 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2 animate-fade-in">
+                                <p className="text-xs font-bold text-rose-500">정말 삭제할까요?</p>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(meal.id); }}
+                                  className="text-[10px] font-black text-white bg-rose-400 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
+                                >
+                                  삭제
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setDeletingId(null); }}
+                                  className="text-[10px] font-black text-gray-500 bg-gray-100 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="self-end flex items-center gap-1">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); startEditing(meal); }}
+                                  className="p-2 text-indigo-300 hover:text-indigo-500 transition-colors"
+                                  aria-label="수정"
+                                  title="수정"
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeletingId(meal.id);
+                                  }}
+                                  className="p-2 text-rose-300 hover:text-rose-500 transition-colors"
+                                  aria-label="삭제"
+                                  title="삭제"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            )
                           )}
                         </div>
                       )}
