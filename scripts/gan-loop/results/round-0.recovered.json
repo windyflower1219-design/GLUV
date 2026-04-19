@@ -1,0 +1,627 @@
+[
+  {
+    "caseId": "seed-01",
+    "category": "basic",
+    "input": "비빔밥 한 그릇 먹고 혈당 120 나왔어",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "비빔밥",
+          "quantity": 1,
+          "unit": "그릇"
+        }
+      ],
+      "glucoseValue": 120,
+      "detectedMeasType": "random",
+      "detectedTime": null
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "비빔밥",
+          "quantity": 1,
+          "unit": "그릇",
+          "carbs": 60,
+          "calories": 500,
+          "glycemicIndex": 70,
+          "protein": 20,
+          "fat": 15,
+          "sodium": 800
+        }
+      ],
+      "glucoseValue": 120,
+      "detectedMeasType": "postmeal_2h",
+      "detectedTime": null,
+      "needsClarification": false,
+      "clarificationQuestion": null
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [\n    {\n      \"name\": \"비빔밥\",\n      \"quantity\": 1,\n      \"unit\": \"그릇\",\n      \"carbs\": 60,\n      \"calories\": 500,\n      \"glycemicIndex\": 70,\n      \"protein\": 20,\n      \"fat\": 15,\n      \"sodium\": 800\n    }\n  ],\n  \"glucoseValue\": 120,\n  \"detectedMeasType\": \"postmeal_2h\",\n  \"detectedTime\": null,\n  \"needsClarification\": false,\n  \"clarificationQuestion\": null\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 0.8947368421052632,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 0,
+        "time": 1,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "seed-02",
+    "category": "time-context",
+    "input": "아침에 된장찌개 먹고 공복 혈당 98",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "된장찌개",
+          "quantity": 1,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": 98,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "된장찌개",
+          "quantity": 1,
+          "unit": "인분",
+          "carbs": 15,
+          "calories": 120,
+          "glycemicIndex": 50,
+          "protein": 10,
+          "fat": 5,
+          "sodium": 800
+        }
+      ],
+      "glucoseValue": 98,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00",
+      "needsClarification": false,
+      "clarificationQuestion": null
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [\n    {\n      \"name\": \"된장찌개\",\n      \"quantity\": 1,\n      \"unit\": \"인분\",\n      \"carbs\": 15,\n      \"calories\": 120,\n      \"glycemicIndex\": 50,\n      \"protein\": 10,\n      \"fat\": 5,\n      \"sodium\": 800\n    }\n  ],\n  \"glucoseValue\": 98,\n  \"detectedMeasType\": \"fasting\",\n  \"detectedTime\": \"08:00\",\n  \"needsClarification\": false,\n  \"clarificationQuestion\": null\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": 1,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "seed-03",
+    "category": "postmeal-ambiguous",
+    "input": "짜장면 먹고 한 시간 뒤에 140 나왔는데요",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "짜장면",
+          "quantity": 1,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": 140,
+      "detectedMeasType": "postmeal_1h",
+      "detectedTime": null
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "짜장면",
+          "quantity": 1,
+          "unit": "인분",
+          "carbs": 65.7,
+          "calories": 857,
+          "glycemicIndex": 62,
+          "protein": 25.1,
+          "fat": 40.1,
+          "sodium": 1076
+        }
+      ],
+      "glucoseValue": 140,
+      "detectedMeasType": "postmeal_1h",
+      "detectedTime": null,
+      "needsClarification": false,
+      "clarificationQuestion": null
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [\n    {\n      \"name\": \"짜장면\",\n      \"quantity\": 1,\n      \"unit\": \"인분\",\n      \"carbs\": 65.7,\n      \"calories\": 857,\n      \"glycemicIndex\": 62,\n      \"protein\": 25.1,\n      \"fat\": 40.1,\n      \"sodium\": 1076\n    }\n  ],\n  \"glucoseValue\": 140,\n  \"detectedMeasType\": \"postmeal_1h\",\n  \"detectedTime\": null,\n  \"needsClarification\": false,\n  \"clarificationQuestion\": null\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": 1,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "seed-04",
+    "category": "multi-food",
+    "input": "아메리카노 한 잔이랑 샌드위치 하나 먹었어",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "아메리카노",
+          "quantity": 1,
+          "unit": "잔"
+        },
+        {
+          "name": "샌드위치",
+          "quantity": 1,
+          "unit": "개"
+        }
+      ],
+      "glucoseValue": null,
+      "detectedMeasType": "random"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "아메리카노",
+          "quantity": 1,
+          "unit": "잔",
+          "carbs": 0,
+          "calories": 5,
+          "glycemicIndex": 0,
+          "protein": 0.5,
+          "fat": 0,
+          "sodium": 2
+        },
+        {
+          "name": "샌드위치",
+          "quantity": 1,
+          "unit": "개",
+          "carbs": 30,
+          "calories": 350,
+          "glycemicIndex": 60,
+          "protein": 15,
+          "fat": 18,
+          "sodium": 700
+        }
+      ],
+      "glucoseValue": null,
+      "detectedMeasType": "random",
+      "detectedTime": null,
+      "needsClarification": true,
+      "clarificationQuestion": "아메리카노 한 잔과 샌드위치 하나를 드셨군요! 혹시 샌드위치의 종류나 대략적인 내용물을 알려주시면 더 정확한 영양 정보도 알 수 있을 것 같아요."
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [\n    {\n      \"name\": \"아메리카노\",\n      \"quantity\": 1,\n      \"unit\": \"잔\",\n      \"carbs\": 0,\n      \"calories\": 5,\n      \"glycemicIndex\": 0,\n      \"protein\": 0.5,\n      \"fat\": 0,\n      \"sodium\": 2\n    },\n    {\n      \"name\": \"샌드위치\",\n      \"quantity\": 1,\n      \"unit\": \"개\",\n      \"carbs\": 30,\n      \"calories\": 350,\n      \"glycemicIndex\": 60,\n      \"protein\": 15,\n      \"fat\": 18,\n      \"sodium\": 700\n    }\n  ],\n  \"glucoseValue\": null,\n  \"detectedMeasType\": \"random\",\n  \"detectedTime\": null,\n  \"needsClarification\": true,\n  \"clarificationQuestion\": \"아메리카노 한 잔과 샌드위치 하나를 드셨군요! 혹시 샌드위치의 종류나 대략적인 내용물을 알려주시면 더 정확한 영양 정보도 알 수 있을 것 같아요.\"\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": null,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "seed-05",
+    "category": "quantity-word",
+    "input": "피자 두 조각만 먹고 혈당 155",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "피자",
+          "quantity": 2,
+          "unit": "조각"
+        }
+      ],
+      "glucoseValue": 155,
+      "detectedMeasType": "random"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "피자",
+          "quantity": 2,
+          "unit": "조각",
+          "carbs": null,
+          "calories": null,
+          "glycemicIndex": null,
+          "protein": null,
+          "fat": null,
+          "sodium": null
+        }
+      ],
+      "glucoseValue": 155,
+      "detectedMeasType": "random",
+      "detectedTime": null,
+      "needsClarification": true,
+      "clarificationQuestion": "피자 두 조각이 어떤 종류의 피자인가요? 그리고 이 혈당 수치가 식사 후 얼마나 지난 후에 측정한 것인지 알려주시겠어요?"
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [\n    {\n      \"name\": \"피자\",\n      \"quantity\": 2,\n      \"unit\": \"조각\",\n      \"carbs\": null,\n      \"calories\": null,\n      \"glycemicIndex\": null,\n      \"protein\": null,\n      \"fat\": null,\n      \"sodium\": null\n    }\n  ],\n  \"glucoseValue\": 155,\n  \"detectedMeasType\": \"random\",\n  \"detectedTime\": null,\n  \"needsClarification\": true,\n  \"clarificationQuestion\": \"피자 두 조각이 어떤 종류의 피자인가요? 그리고 이 혈당 수치가 식사 후 얼마나 지난 후에 측정한 것인지 알려주시겠어요?\"\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": null,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "seed-06",
+    "category": "dialect",
+    "input": "아까 점심에 국밥 한 그릇 먹었드만 혈당이 160이야",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "국밥",
+          "quantity": 1,
+          "unit": "그릇"
+        }
+      ],
+      "glucoseValue": 160,
+      "detectedMeasType": "random",
+      "detectedTime": "12:30"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "국밥",
+          "quantity": 1,
+          "unit": "그릇",
+          "carbs": null,
+          "calories": null,
+          "glycemicIndex": null,
+          "protein": null,
+          "fat": null,
+          "sodium": null
+        }
+      ],
+      "glucoseValue": 160,
+      "detectedMeasType": "postmeal_2h",
+      "detectedTime": "12:30",
+      "needsClarification": false,
+      "clarificationQuestion": null
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [\n    {\n      \"name\": \"국밥\",\n      \"quantity\": 1,\n      \"unit\": \"그릇\",\n      \"carbs\": null,\n      \"calories\": null,\n      \"glycemicIndex\": null,\n      \"protein\": null,\n      \"fat\": null,\n      \"sodium\": null\n    }\n  ],\n  \"glucoseValue\": 160,\n  \"detectedMeasType\": \"postmeal_2h\",\n  \"detectedTime\": \"12:30\",\n  \"needsClarification\": false,\n  \"clarificationQuestion\": null\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 0.8947368421052632,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 0,
+        "time": 1,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "seed-07",
+    "category": "glucose-only",
+    "input": "자고 일어나서 공복 혈당 102 찍혔어",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": 102,
+      "detectedMeasType": "fasting"
+    },
+    "actual": {
+      "parsedFoods": [],
+      "glucoseValue": 102,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00",
+      "needsClarification": false,
+      "clarificationQuestion": ""
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [],\n  \"glucoseValue\": 102,\n  \"detectedMeasType\": \"fasting\",\n  \"detectedTime\": \"08:00\",\n  \"needsClarification\": false,\n  \"clarificationQuestion\": \"\"\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": null,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "seed-08",
+    "category": "number-confusion",
+    "input": "라면 2개 먹고 200 나왔어",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "라면",
+          "quantity": 2,
+          "unit": "봉지"
+        }
+      ],
+      "glucoseValue": 200,
+      "detectedMeasType": "random"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "라면",
+          "quantity": 2,
+          "unit": "개",
+          "carbs": 110,
+          "calories": 900,
+          "glycemicIndex": 70,
+          "protein": 20,
+          "fat": 38,
+          "sodium": 3000
+        }
+      ],
+      "glucoseValue": 200,
+      "detectedMeasType": "random",
+      "detectedTime": null,
+      "needsClarification": false,
+      "clarificationQuestion": null
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [\n    {\n      \"name\": \"라면\",\n      \"quantity\": 2,\n      \"unit\": \"개\",\n      \"carbs\": 110,\n      \"calories\": 900,\n      \"glycemicIndex\": 70,\n      \"protein\": 20,\n      \"fat\": 38,\n      \"sodium\": 3000\n    }\n  ],\n  \"glucoseValue\": 200,\n  \"detectedMeasType\": \"random\",\n  \"detectedTime\": null,\n  \"needsClarification\": false,\n  \"clarificationQuestion\": null\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 0.8888888888888888,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 0,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": null,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "seed-09",
+    "category": "fractional-quantity",
+    "input": "떡볶이 반 인분만 먹었는데 식후 2시간 혈당 175",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "떡볶이",
+          "quantity": 0.5,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": 175,
+      "detectedMeasType": "postmeal_2h"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "떡볶이",
+          "quantity": 0.5,
+          "unit": "인분",
+          "carbs": 30,
+          "calories": 300,
+          "glycemicIndex": 80,
+          "protein": 6,
+          "fat": 10,
+          "sodium": 800
+        }
+      ],
+      "glucoseValue": 175,
+      "detectedMeasType": "postmeal_2h",
+      "detectedTime": null,
+      "needsClarification": false,
+      "clarificationQuestion": null
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [\n    {\n      \"name\": \"떡볶이\",\n      \"quantity\": 0.5,\n      \"unit\": \"인분\",\n      \"carbs\": 30.0,\n      \"calories\": 300.0,\n      \"glycemicIndex\": 80,\n      \"protein\": 6.0,\n      \"fat\": 10.0,\n      \"sodium\": 800\n    }\n  ],\n  \"glucoseValue\": 175,\n  \"detectedMeasType\": \"postmeal_2h\",\n  \"detectedTime\": null,\n  \"needsClarification\": false,\n  \"clarificationQuestion\": null\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": null,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "seed-10",
+    "category": "clarification-needed",
+    "input": "그거 먹었어",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": null,
+      "detectedMeasType": "random",
+      "needsClarification": true
+    },
+    "actual": {
+      "parsedFoods": [],
+      "glucoseValue": null,
+      "detectedMeasType": "random",
+      "detectedTime": null,
+      "needsClarification": true,
+      "clarificationQuestion": "어떤 음식을 드셨는지, 그리고 드신 시간에 대해 조금 더 자세히 알려주시겠어요? 😊"
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [],\n  \"glucoseValue\": null,\n  \"detectedMeasType\": \"random\",\n  \"detectedTime\": null,\n  \"needsClarification\": true,\n  \"clarificationQuestion\": \"어떤 음식을 드셨는지, 그리고 드신 시간에 대해 조금 더 자세히 알려주시겠어요? 😊\"\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": null,
+        "needsClarification": 1
+      }
+    }
+  },
+  {
+    "caseId": "seed-11",
+    "category": "evening-context",
+    "input": "저녁에 삼겹살 3인분 먹고 맥주 2캔도 마셨어",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "삼겹살",
+          "quantity": 3,
+          "unit": "인분"
+        },
+        {
+          "name": "맥주",
+          "quantity": 2,
+          "unit": "캔"
+        }
+      ],
+      "detectedTime": "18:30"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "삼겹살",
+          "quantity": 3,
+          "unit": "인분",
+          "carbs": 0,
+          "calories": 1140,
+          "glycemicIndex": null,
+          "protein": 78,
+          "fat": 90,
+          "sodium": 300
+        },
+        {
+          "name": "맥주",
+          "quantity": 2,
+          "unit": "캔",
+          "carbs": 30,
+          "calories": 280,
+          "glycemicIndex": null,
+          "protein": 2,
+          "fat": 0,
+          "sodium": 40
+        }
+      ],
+      "glucoseValue": null,
+      "detectedMeasType": "random",
+      "detectedTime": "18:30",
+      "needsClarification": false,
+      "clarificationQuestion": null
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [\n    {\n      \"name\": \"삼겹살\",\n      \"quantity\": 3,\n      \"unit\": \"인분\",\n      \"carbs\": 0,\n      \"calories\": 1140,\n      \"glycemicIndex\": null,\n      \"protein\": 78,\n      \"fat\": 90,\n      \"sodium\": 300\n    },\n    {\n      \"name\": \"맥주\",\n      \"quantity\": 2,\n      \"unit\": \"캔\",\n      \"carbs\": 30,\n      \"calories\": 280,\n      \"glycemicIndex\": null,\n      \"protein\": 2,\n      \"fat\": 0,\n      \"sodium\": 40\n    }\n  ],\n  \"glucoseValue\": null,\n  \"detectedMeasType\": \"random\",\n  \"detectedTime\": \"18:30\",\n  \"needsClarification\": false,\n  \"clarificationQuestion\": null\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": null,
+        "time": 1,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "seed-12",
+    "category": "past-tense",
+    "input": "어제 저녁에 치킨 한 마리 먹었는데 오늘 아침 공복혈당 135 나왔어",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "치킨",
+          "quantity": 1,
+          "unit": "마리"
+        }
+      ],
+      "glucoseValue": 135,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "치킨",
+          "quantity": 1,
+          "unit": "마리",
+          "carbs": null,
+          "calories": null,
+          "glycemicIndex": null,
+          "protein": null,
+          "fat": null,
+          "sodium": null
+        }
+      ],
+      "glucoseValue": 135,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00",
+      "needsClarification": false,
+      "clarificationQuestion": null
+    },
+    "rawResponse": "```json\n{\n  \"parsedFoods\": [\n    {\n      \"name\": \"치킨\",\n      \"quantity\": 1,\n      \"unit\": \"마리\",\n      \"carbs\": null,\n      \"calories\": null,\n      \"glycemicIndex\": null,\n      \"protein\": null,\n      \"fat\": null,\n      \"sodium\": null\n    }\n  ],\n  \"glucoseValue\": 135,\n  \"detectedMeasType\": \"fasting\",\n  \"detectedTime\": \"08:00\",\n  \"needsClarification\": false,\n  \"clarificationQuestion\": null\n}\n```",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": 1,
+        "needsClarification": null
+      }
+    }
+  }
+]

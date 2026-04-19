@@ -1,0 +1,124 @@
+[
+  {
+    "id": "r2-01",
+    "category": "pure-clarification",
+    "input": "오늘 뭐 먹었더라...",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": null,
+      "detectedMeasType": "random",
+      "detectedTime": null,
+      "needsClarification": true
+    },
+    "reasoning": "지시 대명사조차 없는 혼잣말. 음식/혈당 모두 없음 → needsClarification=true가 핵심."
+  },
+  {
+    "id": "r2-02",
+    "category": "multi-unit-mix",
+    "input": "아침에 된장찌개 한 그릇이랑 밥 반 공기 먹었어",
+    "expected": {
+      "parsedFoods": [
+        {"name": "된장찌개", "quantity": 1, "unit": "그릇"},
+        {"name": "밥", "quantity": 0.5, "unit": "공기"}
+      ],
+      "glucoseValue": null,
+      "detectedMeasType": "random",
+      "detectedTime": "08:00"
+    },
+    "reasoning": "복수 음식+다른 단위(그릇/공기) + '반 공기'=0.5. 사용자가 '공기' 쓰면 사용자 표현 존중."
+  },
+  {
+    "id": "r2-03",
+    "category": "meal-before",
+    "input": "아침 먹기 전에 혈당 재니까 105",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": 105,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00"
+    },
+    "reasoning": "'아침 먹기 전' — '아침'이라는 식사단어가 있어도 '먹기 전'이면 parsedFoods=[]. 부정 규칙 §5 변형 테스트."
+  },
+  {
+    "id": "r2-04",
+    "category": "regional-food",
+    "input": "콩나물해장국 한 그릇 먹고 속 풀었어 혈당 130",
+    "expected": {
+      "parsedFoods": [{"name": "콩나물해장국", "quantity": 1, "unit": "그릇"}],
+      "glucoseValue": 130,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "매핑표에 없는 변형 음식명. 사용자 표현 그대로 '콩나물해장국' 존중. 단위는 그릇."
+  },
+  {
+    "id": "r2-05",
+    "category": "multi-food-same-type",
+    "input": "만두 열 개랑 김치만두 다섯 개 먹었어",
+    "expected": {
+      "parsedFoods": [
+        {"name": "만두", "quantity": 10, "unit": "개"},
+        {"name": "김치만두", "quantity": 5, "unit": "개"}
+      ],
+      "glucoseValue": null,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "같은 '만두' 계열이지만 종류 다름. 한글 숫자 '열/다섯'. 둘 합쳐서 15개로 보면 fail."
+  },
+  {
+    "id": "r2-06",
+    "category": "indirect-measType",
+    "input": "식사 후 한참 있다가 재보니까 145",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": 145,
+      "detectedMeasType": "postmeal_2h",
+      "detectedTime": null
+    },
+    "reasoning": "'식사 후 한참' = postmeal_2h. 구체 음식 없음."
+  },
+  {
+    "id": "r2-07",
+    "category": "partial-eat",
+    "input": "떡볶이 조금만 먹었어 혈당 135",
+    "expected": {
+      "parsedFoods": [{"name": "떡볶이", "quantity": 0.5, "unit": "인분"}],
+      "glucoseValue": 135,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "'조금만' → 약 0.5인분. 모델이 1로 처리하면 quantity 감점."
+  },
+  {
+    "id": "r2-08",
+    "category": "explicit-time-number",
+    "input": "새벽 3시에 라면 먹고 공복 재니까 118",
+    "expected": {
+      "parsedFoods": [{"name": "라면", "quantity": 1, "unit": "봉지"}],
+      "glucoseValue": 118,
+      "detectedMeasType": "fasting",
+      "detectedTime": "03:00"
+    },
+    "reasoning": "'새벽 3시' — 명시적 숫자 시간이 키워드(새벽=02:00)보다 우선."
+  },
+  {
+    "id": "r2-09",
+    "category": "emotional-noise",
+    "input": "오늘 너무 힘들었어 그래도 비빔밥 한 그릇 먹었는데 혈당 155",
+    "expected": {
+      "parsedFoods": [{"name": "비빔밥", "quantity": 1, "unit": "그릇"}],
+      "glucoseValue": 155,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "감정 표현에 영향받지 말고 음식/혈당만 정확히. '오늘'은 시간대 키워드 아니므로 detectedTime=null."
+  },
+  {
+    "id": "r2-10",
+    "category": "cooked-vs-eaten",
+    "input": "라면 한 봉지 끓였는데 반만 먹었어 혈당 140",
+    "expected": {
+      "parsedFoods": [{"name": "라면", "quantity": 0.5, "unit": "봉지"}],
+      "glucoseValue": 140,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "끓인 양 vs 먹은 양 — 실제 섭취량(0.5)을 기록해야. '한 봉지'만 보면 1로 오답."
+  }
+]

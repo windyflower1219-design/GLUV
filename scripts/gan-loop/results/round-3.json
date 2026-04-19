@@ -1,0 +1,300 @@
+[
+  {
+    "caseId": "r3-01",
+    "category": "basic-stub",
+    "input": "비빔밥 한 그릇 먹고 혈당 120 나왔어 (라운드3)",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "비빔밥",
+          "quantity": 1,
+          "unit": "그릇"
+        }
+      ],
+      "glucoseValue": 120,
+      "detectedMeasType": "random",
+      "detectedTime": null
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "비빔밥",
+          "quantity": 1,
+          "unit": "인분"
+        },
+        {
+          "name": "밥",
+          "quantity": 1,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": 120,
+      "detectedMeasType": "random",
+      "detectedTime": null,
+      "needsClarification": false
+    },
+    "rawResponse": "",
+    "error": null,
+    "score": {
+      "composite": 0.8157894736842105,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 0.5,
+        "quantityAcc": 1,
+        "unitAcc": 0,
+        "hallucinatedFoods": [
+          "밥"
+        ],
+        "glucose": 1,
+        "measType": 1,
+        "time": 1,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "r3-02",
+    "category": "time-context-stub",
+    "input": "아침에 된장찌개 먹고 공복 혈당 98 (라운드3)",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "된장찌개",
+          "quantity": 1,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": 98,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "된장찌개",
+          "quantity": 1,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": 98,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00",
+      "needsClarification": false
+    },
+    "rawResponse": "",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": 1,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "r3-03",
+    "category": "postmeal-ambiguous-stub",
+    "input": "짜장면 먹고 한 시간 뒤에 140 나왔는데요 (라운드3)",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "짜장면",
+          "quantity": 1,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": 140,
+      "detectedMeasType": "postmeal_1h",
+      "detectedTime": null
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "짜장면",
+          "quantity": 1,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": 140,
+      "detectedMeasType": "postmeal_1h",
+      "detectedTime": null,
+      "needsClarification": false
+    },
+    "rawResponse": "",
+    "error": null,
+    "score": {
+      "composite": 1,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 1,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": 1,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "r3-04",
+    "category": "multi-food-stub",
+    "input": "아메리카노 한 잔이랑 샌드위치 하나 먹었어 (라운드3)",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "아메리카노",
+          "quantity": 1,
+          "unit": "잔"
+        },
+        {
+          "name": "샌드위치",
+          "quantity": 1,
+          "unit": "개"
+        }
+      ],
+      "glucoseValue": null,
+      "detectedMeasType": "random"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "아메리카노",
+          "quantity": 1,
+          "unit": "인분"
+        },
+        {
+          "name": "샌드위치",
+          "quantity": 1,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": null,
+      "detectedMeasType": "random",
+      "detectedTime": null,
+      "needsClarification": false
+    },
+    "rawResponse": "",
+    "error": null,
+    "score": {
+      "composite": 0.8888888888888888,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 1,
+        "unitAcc": 0,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": null,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "r3-05",
+    "category": "quantity-word-stub",
+    "input": "피자 두 조각만 먹고 혈당 155 (라운드3)",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "피자",
+          "quantity": 2,
+          "unit": "조각"
+        }
+      ],
+      "glucoseValue": 155,
+      "detectedMeasType": "random"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "피자",
+          "quantity": 1,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": 155,
+      "detectedMeasType": "random",
+      "detectedTime": null,
+      "needsClarification": false
+    },
+    "rawResponse": "",
+    "error": null,
+    "score": {
+      "composite": 0.7222222222222222,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 1,
+        "quantityAcc": 0,
+        "unitAcc": 0,
+        "hallucinatedFoods": [],
+        "glucose": 1,
+        "measType": 1,
+        "time": null,
+        "needsClarification": null
+      }
+    }
+  },
+  {
+    "caseId": "r3-06",
+    "category": "dialect-stub",
+    "input": "아까 점심에 국밥 한 그릇 먹었드만 혈당이 160이야 (라운드3)",
+    "expected": {
+      "parsedFoods": [
+        {
+          "name": "국밥",
+          "quantity": 1,
+          "unit": "그릇"
+        }
+      ],
+      "glucoseValue": 160,
+      "detectedMeasType": "random",
+      "detectedTime": "12:30"
+    },
+    "actual": {
+      "parsedFoods": [
+        {
+          "name": "국밥",
+          "quantity": 1,
+          "unit": "인분"
+        },
+        {
+          "name": "밥",
+          "quantity": 1,
+          "unit": "인분"
+        }
+      ],
+      "glucoseValue": 160,
+      "detectedMeasType": "random",
+      "detectedTime": "12:30",
+      "needsClarification": false
+    },
+    "rawResponse": "",
+    "error": null,
+    "score": {
+      "composite": 0.8157894736842105,
+      "breakdown": {
+        "foodRecall": 1,
+        "foodPrecision": 0.5,
+        "quantityAcc": 1,
+        "unitAcc": 0,
+        "hallucinatedFoods": [
+          "밥"
+        ],
+        "glucose": 1,
+        "measType": 1,
+        "time": 1,
+        "needsClarification": null
+      }
+    }
+  }
+]

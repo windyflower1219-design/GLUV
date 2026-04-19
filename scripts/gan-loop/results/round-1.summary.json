@@ -1,0 +1,14 @@
+{
+  "n": 10,
+  "composite": 0.9309649122807017,
+  "pass": 9,
+  "fail": 1,
+  "foodRecall": 0.9,
+  "foodPrecision": 0.9,
+  "quantityAcc": 1,
+  "unitAcc": 0.75,
+  "glucose": 1,
+  "measType": 1,
+  "time": 0.8,
+  "needsClarification": 1
+}

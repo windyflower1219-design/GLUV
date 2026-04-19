@@ -1,0 +1,123 @@
+[
+  {
+    "id": "r1-01",
+    "category": "time-vague",
+    "input": "점심때쯤 짬뽕 한 그릇 먹었는데 혈당 148",
+    "expected": {
+      "parsedFoods": [{"name": "짬뽕", "quantity": 1, "unit": "그릇"}],
+      "glucoseValue": 148,
+      "detectedMeasType": "random",
+      "detectedTime": "12:30"
+    },
+    "reasoning": "'점심때'는 점심 시점과 동일하게 매핑되어야 함. baseline 지침엔 '점심'만 있고 '점심때'/'점심쯤'은 미지정 → 미추론 위험."
+  },
+  {
+    "id": "r1-02",
+    "category": "late-night",
+    "input": "새벽에 라면 하나 끓여먹고 공복 측정했더니 115",
+    "expected": {
+      "parsedFoods": [{"name": "라면", "quantity": 1, "unit": "봉지"}],
+      "glucoseValue": 115,
+      "detectedMeasType": "fasting",
+      "detectedTime": "02:00"
+    },
+    "reasoning": "baseline은 아침/점심/저녁만 매핑. 새벽은 가이드 없음 → 하드모드."
+  },
+  {
+    "id": "r1-03",
+    "category": "korean-numeral",
+    "input": "김밥 두 줄 먹고 혈당 백칠십오",
+    "expected": {
+      "parsedFoods": [{"name": "김밥", "quantity": 2, "unit": "줄"}],
+      "glucoseValue": 175,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "한글 숫자 '백칠십오'=175. baseline에 한글 숫자 변환 지침 없음."
+  },
+  {
+    "id": "r1-04",
+    "category": "number-collision",
+    "input": "만두 12개 먹고 120 나왔어",
+    "expected": {
+      "parsedFoods": [{"name": "만두", "quantity": 12, "unit": "개"}],
+      "glucoseValue": 120,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "12(수량)와 120(혈당)이 인접 — 혼동 위험. 12를 혈당으로 오인하면 fail."
+  },
+  {
+    "id": "r1-05",
+    "category": "negation",
+    "input": "오늘 아침엔 아무것도 안 먹었는데 공복혈당 92",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": 92,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00"
+    },
+    "reasoning": "부정문 — 음식 환각 금지. 아침 언급은 있으나 음식 없음."
+  },
+  {
+    "id": "r1-06",
+    "category": "relative-time",
+    "input": "된장찌개 먹은 지 두시간 됐는데 혈당 138",
+    "expected": {
+      "parsedFoods": [{"name": "된장찌개", "quantity": 1, "unit": "인분"}],
+      "glucoseValue": 138,
+      "detectedMeasType": "postmeal_2h"
+    },
+    "reasoning": "'먹은 지 두 시간' → postmeal_2h. baseline에 '먹은 지 N시간' 패턴 없음."
+  },
+  {
+    "id": "r1-07",
+    "category": "unit-colloquial",
+    "input": "콜라 한 잔이랑 피자 3쪽 먹었어",
+    "expected": {
+      "parsedFoods": [
+        {"name": "콜라", "quantity": 1, "unit": "잔"},
+        {"name": "피자", "quantity": 3, "unit": "조각"}
+      ],
+      "glucoseValue": null,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "'한 잔'(비표준, 캔/병이 표준), '3쪽'(조각). 사용자가 쓴 단위를 존중해야 함."
+  },
+  {
+    "id": "r1-08",
+    "category": "fractional-complex",
+    "input": "떡볶이 1인분 반 하고 김밥 한 줄 반 먹었어",
+    "expected": {
+      "parsedFoods": [
+        {"name": "떡볶이", "quantity": 1.5, "unit": "인분"},
+        {"name": "김밥", "quantity": 1.5, "unit": "줄"}
+      ],
+      "glucoseValue": null
+    },
+    "reasoning": "'1인분 반'=1.5, '한 줄 반'=1.5. 복합 분수 표현."
+  },
+  {
+    "id": "r1-09",
+    "category": "dialect-busan",
+    "input": "아이고 점심에 돼지국밥 한 그릇 묵었는데 마 혈당 170 나와뿌렀다",
+    "expected": {
+      "parsedFoods": [{"name": "국밥", "quantity": 1, "unit": "그릇"}],
+      "glucoseValue": 170,
+      "detectedMeasType": "random",
+      "detectedTime": "12:30"
+    },
+    "reasoning": "부산 사투리 — '묵었는데', '나와뿌렀다', 감탄사 '마'. '돼지국밥'은 '국밥'으로 매칭 가능."
+  },
+  {
+    "id": "r1-10",
+    "category": "glucose-hypo-extreme",
+    "input": "점심 먹기 전에 혈당 재봤더니 58이야 뭐 먹어야겠지",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": 58,
+      "detectedMeasType": "fasting",
+      "detectedTime": "12:30",
+      "needsClarification": false
+    },
+    "reasoning": "저혈당(58) 경계. 혈당 숫자 범위 제한 없어야 함. '점심 먹기 전'은 공복에 가까움."
+  }
+]

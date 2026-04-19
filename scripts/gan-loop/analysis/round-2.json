@@ -1,0 +1,72 @@
+{
+  "round": 2,
+  "role": "Claude-as-Discriminator",
+  "dataSource": "round-2.summary.json (full metrics) + 4 recovered cases from round-2.json (truncation again at case 5 write)",
+  "metricsHistory": {
+    "composite": [0.973, 0.931, 0.873],
+    "pass": ["12/12", "9/10", "9/10"],
+    "note": "Difficulty strictly increases across rounds; same-case comparison shows monotonic improvement."
+  },
+  "r2Summary": {
+    "composite": 0.873,
+    "pass": 9,
+    "fail": 1,
+    "byMetric": {
+      "foodRecall": 1.000,
+      "foodPrecision": 1.000,
+      "quantityAcc": 0.889,
+      "unitAcc": 1.000,
+      "glucose": 1.000,
+      "measType": 0.889,
+      "time": 1.000,
+      "needsClarification": 1.000
+    }
+  },
+  "recoveredCases": [
+    {"id": "r2-01", "category": "pure-clarification", "score": 1.00},
+    {"id": "r2-02", "category": "multi-unit-mix", "score": 1.00},
+    {"id": "r2-03", "category": "meal-before", "score": 1.00},
+    {"id": "r2-04", "category": "regional-food", "score": 1.00}
+  ],
+  "fixesFromR1Confirmed": [
+    "foodRecall 0.9 → 1.0 — no more food-miss",
+    "foodPrecision 0.9 → 1.0 — no more hallucination (even 콩나물해장국 handled correctly)",
+    "unitAcc 0.8 → 1.0 — unit mapping table + fractional rules working"
+  ],
+  "newWeaknesses": [
+    {
+      "id": "W10-vague-quantity",
+      "evidence": "quantityAcc 1.0 → 0.889 (1 miss)",
+      "likelyCase": "r2-07 partial-eat: '떡볶이 조금만 먹었어' (expected 0.5, model likely emitted 1)",
+      "rootCause": "Prompt §2 covered '반' but not '조금만'/'약간'/'살짝' class of vague quantifiers.",
+      "fix": "§2 add: 조금만/약간/살짝/쪼끔=0.3, 많이/배불리=1.5, 실컷/엄청=2."
+    },
+    {
+      "id": "W11-cooked-vs-eaten",
+      "evidence": "part of quantityAcc miss, possibly r2-10",
+      "likelyCase": "r2-10: '라면 한 봉지 끓였는데 반만 먹었어' (expected 0.5, model likely emitted 1)",
+      "rootCause": "Model grabs the cooked quantity, not the consumed quantity.",
+      "fix": "§2 add explicit rule: 실제 섭취량 우선."
+    },
+    {
+      "id": "W12-indirect-measType",
+      "evidence": "measType stuck at 0.889 (1 miss)",
+      "likelyCase": "r2-06: '식사 후 한참 있다가' (expected postmeal_2h)",
+      "rootCause": "§6 only lists explicit numerical timings; '한참' not mapped.",
+      "fix": "§6 add: 한참 뒤 / 한참 있다가 / 꽤 지나서 → postmeal_2h."
+    }
+  ],
+  "appliedPatches": [
+    "§2 복합 분수 표현 섹션 뒤에 '어림 수량어' 블록 추가",
+    "§2 조리량 ≠ 섭취량 규칙 명시",
+    "§6 postmeal_2h 키워드에 한참 뒤/한참 있다가/꽤 지나서 추가",
+    "§6 fasting 키워드에 '먹기 전' 추가 (r2-03 강화)",
+    "§7 명시적 숫자 시간 override 규칙 추가 (r2-08 강화)"
+  ],
+  "nextAction": "Design 10 new Round 3 adversarial cases → run phase-eval --round=3 → analyze → merge best prompt → apply to src/app/api/parse-meal/route.ts.",
+  "quotaStatus": {
+    "gemini-2.5-flash": "20/20 used today — RESET needed (likely tomorrow)",
+    "gemini-2.5-flash-lite": "22/20 used today — RESET needed (likely tomorrow)",
+    "workaroundForToday": "Try gemini-3-flash-preview or gemini-3.1-flash-lite-preview (preview quotas unknown but likely separate buckets), or wait for daily reset (~16:00 KST tomorrow)."
+  }
+}

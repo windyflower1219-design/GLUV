@@ -1,0 +1,97 @@
+{
+  "round": 1,
+  "role": "Claude-as-Discriminator",
+  "dataSource": "Terminal screenshot (round-1.json was overwritten during recovery). Inputs + composite scores known; individual JSON outputs lost.",
+  "runConfig": {
+    "model": "gemini-2.5-flash-lite",
+    "throttleMs": 2000,
+    "retriesOn429": 4
+  },
+  "results": {
+    "composite": 0.458,
+    "pass": 5,
+    "fail": 5,
+    "total": 10,
+    "passCases": [
+      {"id": "r1-01", "category": "time-vague", "score": 0.89, "input": "점심때쯤 짬뽕 한 그릇 먹었는데 혈당 148"},
+      {"id": "r1-02", "category": "late-night", "score": 0.84, "input": "새벽에 라면 하나 끓여먹고 공복 측정했더니 115"},
+      {"id": "r1-06", "category": "relative-time", "score": 1.00, "input": "(per cases file)"},
+      {"id": "r1-07", "category": "unit-colloquial", "score": 0.94, "input": "(per cases file)"},
+      {"id": "r1-10", "category": "glucose-hypo-extreme", "score": 0.90, "input": "(per cases file)"}
+    ],
+    "failCases": [
+      {"id": "r1-03", "category": "korean-numeral", "score": 0.00, "input": "김밥 두 줄 먹고 혈당 백칠십오", "retryLog": "429 on attempts 1/4, 2/4, 3/4 → exhausted", "likelyCause": "quota_exhaustion"},
+      {"id": "r1-04", "category": "number-collision", "score": 0.00, "input": "만두 12개 먹고 120 나왔어", "retryLog": "429 exhausted", "likelyCause": "quota_exhaustion"},
+      {"id": "r1-05", "category": "negation", "score": 0.00, "input": "오늘 아침엔 아무것도 안 먹었는데 공복혈당 92", "retryLog": "429 exhausted", "likelyCause": "quota_exhaustion"},
+      {"id": "r1-08", "category": "fractional-complex", "score": 0.00, "input": "떡볶이 1인분 반 하고 김밥 한 줄 반 먹었어", "retryLog": "429 exhausted", "likelyCause": "quota_exhaustion"},
+      {"id": "r1-09", "category": "dialect-busan", "score": 0.00, "input": "아이고 점심에 돼지국밥 한 그릇 묵었는데 마 혈당 170 나와뿌렀다", "retryLog": "no retries shown", "likelyCause": "actual_parse_failure"}
+    ]
+  },
+  "dataIntegrityNote": "4 of 5 failures were quota-exhaustion (no real Gemini output recorded). Only r1-09 and the 2 Round-1 passes (r1-01, r1-02) are real parse signal. Treating the 4 quota-exhausted cases as 'unknown' rather than confirmed failures.",
+  "weaknessesConfirmed": [
+    {
+      "id": "W1-measType-over-postmeal",
+      "confirmationLevel": "strong (4+ cases across Round 0 & 1)",
+      "evidence": ["seed-01", "seed-06", "seed-08", "r1-01"],
+      "pattern": "Food+glucose in same utterance with NO explicit timing keyword → model picks postmeal_2h instead of random."
+    },
+    {
+      "id": "W2-unit-inference",
+      "confirmationLevel": "moderate (1 case)",
+      "evidence": ["r1-02"],
+      "pattern": "라면 하나 → 개 instead of 봉지."
+    },
+    {
+      "id": "W3-time-keyword-gaps",
+      "confirmationLevel": "moderate (1 case)",
+      "evidence": ["r1-02"],
+      "pattern": "새벽 → 03:00 (expected 02:00)."
+    },
+    {
+      "id": "W9-dialect-and-unknown-food",
+      "confirmationLevel": "confirmed (1 case, real parse failure)",
+      "evidence": ["r1-09"],
+      "pattern": "Regional dialect verbs (묵었다, 나와뿌렀다) + food name not in mapping table (돼지국밥) → composite 0."
+    }
+  ],
+  "weaknessesHypothesized": [
+    {
+      "id": "W4-korean-numeral",
+      "confirmationLevel": "hypothesis (quota-blocked)",
+      "evidence": ["r1-03"],
+      "pattern": "혈당 수치가 한글 숫자('백칠십오', '이백')로 표현될 때 파싱 난이도 상승.",
+      "note": "Actual Gemini output unknown; preemptive defense recommended."
+    },
+    {
+      "id": "W5-number-collision",
+      "confirmationLevel": "hypothesis (quota-blocked)",
+      "evidence": ["r1-04"],
+      "pattern": "같은 문장에 quantity(12)와 glucose(120)가 공존할 때 역할 혼동 위험.",
+      "note": "Preemptive disambiguation rule recommended."
+    },
+    {
+      "id": "W6-negation",
+      "confirmationLevel": "hypothesis (quota-blocked)",
+      "evidence": ["r1-05"],
+      "pattern": "'아무것도 안 먹었는데' 같은 부정 표현 뒤 '먹었는데' 동사만 보고 음식을 환각할 위험.",
+      "note": "Preemptive negation rule recommended."
+    },
+    {
+      "id": "W7-fractional-complex",
+      "confirmationLevel": "hypothesis (quota-blocked)",
+      "evidence": ["r1-08"],
+      "pattern": "'1인분 반' = 1.5, '한 줄 반' = 1.5 같은 복합 분수 표현.",
+      "note": "Preemptive fractional-combination rule recommended."
+    }
+  ],
+  "plannedChanges": [
+    "Keep §1-§6 from round-1.txt (they target confirmed W1/W2/W3)",
+    "§2 unit table: add 돼지국밥 → 그릇 (covers W9 food-mapping gap)",
+    "§3 glucose: elevate Korean-numeral examples (백칠십오→175, 이백→200) per W4",
+    "§3/§4 disambiguation: add rule — '숫자+단위(개/줄/...)' is quantity; bare '혈당 N' or trailing N without unit is glucose (covers W5)",
+    "Add §7 negation rule: '안 먹었다', '먹지 않았다', '아무것도 안' → parsedFoods=[] (covers W6)",
+    "§2 quantity parsing: add '인분 반' = 1.5, 'N+반' = N+0.5 rule (covers W7)",
+    "Add §8 dialect normalization: 묵었다/먹었삐다/나와뿌렀다 등 사투리 동사는 표준어로 해석 (covers W9 dialect part)"
+  ],
+  "nextAction": "Overwrite prompts/round-1.txt with extended version; copy to state/prompt.current.txt. Validate with 2.5-flash (20 RPD fresh) or wait for 2.5-flash-lite RPD reset."
+}

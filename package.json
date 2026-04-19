@@ -7,7 +7,13 @@
     "dev": "next dev -H 0.0.0.0",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "gan:loop": "node scripts/gan-loop/runner.mjs",
+    "gan:dry": "node scripts/gan-loop/runner.mjs --dry-run",
+    "gan:apply": "node scripts/gan-loop/apply-prompt.mjs",
+    "gan:eval": "node scripts/gan-loop/phase-eval.mjs",
+    "gan:patch": "node scripts/gan-loop/phase-patch.mjs",
+    "gan:final": "node scripts/gan-loop/phase-final.mjs"
   },
   "keywords": [],
   "author": "",

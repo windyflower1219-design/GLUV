@@ -1,0 +1,239 @@
+[
+  {
+    "id": "seed-01",
+    "category": "basic",
+    "input": "비빔밥 한 그릇 먹고 혈당 120 나왔어",
+    "expected": {
+      "parsedFoods": [{"name": "비빔밥", "quantity": 1, "unit": "그릇"}],
+      "glucoseValue": 120,
+      "detectedMeasType": "random",
+      "detectedTime": null
+    },
+    "reasoning": "기본 케이스 — 음식·수량·단위·혈당값이 모두 명시"
+  },
+  {
+    "id": "seed-02",
+    "category": "time-context",
+    "input": "아침에 된장찌개 먹고 공복 혈당 98",
+    "expected": {
+      "parsedFoods": [{"name": "된장찌개", "quantity": 1, "unit": "인분"}],
+      "glucoseValue": 98,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00"
+    },
+    "reasoning": "시간 맥락 + 공복 라벨 동시"
+  },
+  {
+    "id": "seed-03",
+    "category": "postmeal-ambiguous",
+    "input": "짜장면 먹고 한 시간 뒤에 140 나왔는데요",
+    "expected": {
+      "parsedFoods": [{"name": "짜장면", "quantity": 1, "unit": "인분"}],
+      "glucoseValue": 140,
+      "detectedMeasType": "postmeal_1h",
+      "detectedTime": null
+    },
+    "reasoning": "'한 시간 뒤'를 postmeal_1h로 추론해야 함"
+  },
+  {
+    "id": "seed-04",
+    "category": "multi-food",
+    "input": "아메리카노 한 잔이랑 샌드위치 하나 먹었어",
+    "expected": {
+      "parsedFoods": [
+        {"name": "아메리카노", "quantity": 1, "unit": "잔"},
+        {"name": "샌드위치", "quantity": 1, "unit": "개"}
+      ],
+      "glucoseValue": null,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "다중 음식 + 단위 다름"
+  },
+  {
+    "id": "seed-05",
+    "category": "quantity-word",
+    "input": "피자 두 조각만 먹고 혈당 155",
+    "expected": {
+      "parsedFoods": [{"name": "피자", "quantity": 2, "unit": "조각"}],
+      "glucoseValue": 155,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "'두 조각'을 숫자 2로 정확히"
+  },
+  {
+    "id": "seed-06",
+    "category": "dialect",
+    "input": "아까 점심에 국밥 한 그릇 먹었드만 혈당이 160이야",
+    "expected": {
+      "parsedFoods": [{"name": "국밥", "quantity": 1, "unit": "그릇"}],
+      "glucoseValue": 160,
+      "detectedMeasType": "random",
+      "detectedTime": "12:30"
+    },
+    "reasoning": "사투리 어미 '먹었드만'"
+  },
+  {
+    "id": "seed-07",
+    "category": "glucose-only",
+    "input": "자고 일어나서 공복 혈당 102 찍혔어",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": 102,
+      "detectedMeasType": "fasting"
+    },
+    "reasoning": "음식 없음, 공복 혈당만"
+  },
+  {
+    "id": "seed-08",
+    "category": "number-confusion",
+    "input": "라면 2개 먹고 200 나왔어",
+    "expected": {
+      "parsedFoods": [{"name": "라면", "quantity": 2, "unit": "봉지"}],
+      "glucoseValue": 200,
+      "detectedMeasType": "random"
+    },
+    "reasoning": "숫자 2(수량)와 200(혈당) 구분"
+  },
+  {
+    "id": "seed-09",
+    "category": "fractional-quantity",
+    "input": "떡볶이 반 인분만 먹었는데 식후 2시간 혈당 175",
+    "expected": {
+      "parsedFoods": [{"name": "떡볶이", "quantity": 0.5, "unit": "인분"}],
+      "glucoseValue": 175,
+      "detectedMeasType": "postmeal_2h"
+    },
+    "reasoning": "'반 인분' = 0.5"
+  },
+  {
+    "id": "seed-10",
+    "category": "clarification-needed",
+    "input": "그거 먹었어",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": null,
+      "detectedMeasType": "random",
+      "needsClarification": true
+    },
+    "reasoning": "모호 — needsClarification=true 필수"
+  },
+  {
+    "id": "seed-11",
+    "category": "evening-context",
+    "input": "저녁에 삼겹살 3인분 먹고 맥주 2캔도 마셨어",
+    "expected": {
+      "parsedFoods": [
+        {"name": "삼겹살", "quantity": 3, "unit": "인분"},
+        {"name": "맥주", "quantity": 2, "unit": "캔"}
+      ],
+      "detectedTime": "18:30"
+    },
+    "reasoning": "저녁 컨텍스트 + 다중 음식 + 음료"
+  },
+  {
+    "id": "seed-12",
+    "category": "past-tense",
+    "input": "어제 저녁에 치킨 한 마리 먹었는데 오늘 아침 공복혈당 135 나왔어",
+    "expected": {
+      "parsedFoods": [{"name": "치킨", "quantity": 1, "unit": "마리"}],
+      "glucoseValue": 135,
+      "detectedMeasType": "fasting",
+      "detectedTime": "08:00"
+    },
+    "reasoning": "어제 음식 vs 오늘 측정 — detectedTime은 측정 시점 기준"
+  },
+  {
+    "id": "seed-13",
+    "category": "loanword",
+    "input": "점심에 파스타랑 샐러드 먹고 라떼도 한 잔 했어",
+    "expected": {
+      "parsedFoods": [
+        {"name": "파스타", "quantity": 1, "unit": "인분"},
+        {"name": "샐러드", "quantity": 1, "unit": "인분"},
+        {"name": "라떼", "quantity": 1, "unit": "잔"}
+      ],
+      "detectedTime": "12:30"
+    },
+    "reasoning": "외래어 3종 혼합"
+  },
+  {
+    "id": "seed-14",
+    "category": "informal-number",
+    "input": "김밥 한 줄 하고 혈당 백삼십 나왔어",
+    "expected": {
+      "parsedFoods": [{"name": "김밥", "quantity": 1, "unit": "줄"}],
+      "glucoseValue": 130
+    },
+    "reasoning": "'백삼십' 한글 숫자"
+  },
+  {
+    "id": "seed-15",
+    "category": "unit-swap",
+    "input": "햄버거 하나랑 콜라 한 캔 먹고 식후 30분 162",
+    "expected": {
+      "parsedFoods": [
+        {"name": "햄버거", "quantity": 1, "unit": "개"},
+        {"name": "콜라", "quantity": 1, "unit": "캔"}
+      ],
+      "glucoseValue": 162,
+      "detectedMeasType": "postmeal_30m"
+    },
+    "reasoning": "단위 다름(개/캔)"
+  },
+  {
+    "id": "seed-16",
+    "category": "typo-spaceless",
+    "input": "비빔밥먹고혈당120",
+    "expected": {
+      "parsedFoods": [{"name": "비빔밥", "quantity": 1, "unit": "인분"}],
+      "glucoseValue": 120
+    },
+    "reasoning": "공백 없음 — tokenization 견고성"
+  },
+  {
+    "id": "seed-17",
+    "category": "emotion-filler",
+    "input": "아 오늘 좀 많이 먹었는데 비빔밥 한 그릇에 만두도 5개 먹고 혈당이 글쎄 178이 나와버렸네",
+    "expected": {
+      "parsedFoods": [
+        {"name": "비빔밥", "quantity": 1, "unit": "그릇"},
+        {"name": "만두", "quantity": 5, "unit": "개"}
+      ],
+      "glucoseValue": 178
+    },
+    "reasoning": "감탄사·부사 노이즈 많음"
+  },
+  {
+    "id": "seed-18",
+    "category": "imperative",
+    "input": "혈당만 기록해줘 105야",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": 105,
+      "needsClarification": false
+    },
+    "reasoning": "명령형 + 음식 없음"
+  },
+  {
+    "id": "seed-19",
+    "category": "ambiguous-measType",
+    "input": "밥 먹은 지 30분 지났는데 혈당 140",
+    "expected": {
+      "parsedFoods": [{"name": "밥", "quantity": 1, "unit": "공기"}],
+      "glucoseValue": 140,
+      "detectedMeasType": "postmeal_30m"
+    },
+    "reasoning": "'먹은 지 30분' → postmeal_30m"
+  },
+  {
+    "id": "seed-20",
+    "category": "glucose-boundary",
+    "input": "공복 혈당 70이었어",
+    "expected": {
+      "parsedFoods": [],
+      "glucoseValue": 70,
+      "detectedMeasType": "fasting"
+    },
+    "reasoning": "저혈당 경계값 — 70 이상 필터로 자르면 안 됨"
+  }
+]
