@@ -38,6 +38,7 @@ export default function MealsPage() {
   
   const { openVoiceInput, isSubmitting, setIsSubmitting } = useVoiceInputContext();
   const { saveUnifiedRecord } = useUnifiedStorage();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchMeals = useCallback(async (showLoading = true) => {
     if (showLoading) setIsInitialLoading(true);
@@ -61,10 +62,9 @@ export default function MealsPage() {
   }, [fetchMeals]);
 
   const handleDelete = async (id: string) => {
-    if (confirm('이 기록을 삭제하시겠습니까?')) {
-      await deleteMeal(id);
-      fetchMeals();
-    }
+    await deleteMeal(id);
+    setDeletingId(null);
+    fetchMeals();
   };
 
   const groupedMeals = meals.reduce<Record<MealType, Meal[]>>((acc, meal) => {
@@ -257,15 +257,34 @@ export default function MealsPage() {
                             ))}
                           </div>
                           
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(meal.id);
-                            }}
-                            className="self-end p-2 text-rose-300 hover:text-rose-500 transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          {/* 삭제 확인 인라인 UI */}
+                          {deletingId === meal.id ? (
+                            <div className="self-end flex items-center gap-2 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2 animate-fade-in">
+                              <p className="text-xs font-bold text-rose-500">정말 삭제할까요?</p>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(meal.id); }}
+                                className="text-[10px] font-black text-white bg-rose-400 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
+                              >
+                                삭제
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDeletingId(null); }}
+                                className="text-[10px] font-black text-gray-500 bg-gray-100 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
+                              >
+                                취소
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingId(meal.id);
+                              }}
+                              className="self-end p-2 text-rose-300 hover:text-rose-500 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

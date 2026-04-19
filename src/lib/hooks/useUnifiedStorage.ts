@@ -6,11 +6,11 @@ import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
 import { useAuth } from '@/context/AuthContext';
 import type { FoodItem, Meal, MeasurementType, MealType } from '@/types';
 
-function getMealType(): MealType {
-  const h = new Date().getHours();
-  if (h >= 6 && h < 10) return 'breakfast';
+function getMealTypeFromTime(date: Date): MealType {
+  const h = date.getHours();
+  if (h >= 5 && h < 10) return 'breakfast';
   if (h >= 10 && h < 15) return 'lunch';
-  if (h >= 15 && h < 19) return 'dinner';
+  if (h >= 15 && h < 21) return 'dinner';
   return 'snack';
 }
 
@@ -28,12 +28,12 @@ export const useUnifiedStorage = () => {
     const prediction = predictGlucoseResponse(fullFoods, 100);
     
     try {
-      // 1. 식단 저장
+      // 1. 식단 저장 - 기록 시각 기반으로 mealType 계산 (현재 시각 X)
       if (fullFoods.length > 0) {
         const mealData: Omit<Meal, 'id'> = {
           userId: userId,
           timestamp: timestamp,
-          mealType: getMealType(),
+          mealType: getMealTypeFromTime(timestamp),
           rawVoiceInput: rawText,
           parsedFoods: fullFoods,
           totalCarbs: fullFoods.reduce((s, f) => s + (f.carbs || 0) * (f.quantity || 1), 0),
@@ -58,7 +58,7 @@ export const useUnifiedStorage = () => {
       console.error('Error in unified storage:', error);
       throw error;
     }
-  }, []);
+  }, [userId]);
 
   return { saveUnifiedRecord };
 };

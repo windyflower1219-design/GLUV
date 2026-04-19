@@ -27,7 +27,7 @@ export default function LoginPage() {
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
       }
-      router.push('/dashboard'); // 로그인 성공 후 대시보드로 이동
+      router.push('/dashboard');
     } catch (err: any) {
       console.error(err);
       setError(err.message || '인증에 실패했습니다. 이메일과 비밀번호를 확인해주세요.');

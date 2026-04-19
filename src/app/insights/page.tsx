@@ -45,9 +45,7 @@ export default function InsightsPage() {
   const fetchAIInsights = useCallback(async () => {
     setIsGenerating(true);
     try {
-      // 최근 2일 식단 정보 요약 가져오기
-      const recentMeals = await getMeals(userId, new Date()); 
-      // API Call
+      const recentMeals = await getMeals(userId, new Date());
       const res = await fetch('/api/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,6 +68,40 @@ export default function InsightsPage() {
       if (mapped.length > 0) setExpandedId(mapped[0].id);
     } catch (err) {
       console.error(err);
+      // AI API 실패 시 기본 인사이트 표시
+      const fallback: ActionableInsight[] = [
+        {
+          id: 'fallback_1',
+          type: 'recommendation',
+          title: '💧 물 충분히 마시기',
+          message: '혈당 관리에 수분 섭취는 필수입니다. 하루 1.5L~2L 정도 충분히 마셔보세요!',
+          emoji: '💧',
+          actionLabel: '수분 섭취 팁 보기',
+          createdAt: new Date(),
+          isRead: false,
+        },
+        {
+          id: 'fallback_2',
+          type: 'achievement',
+          title: '🌟 기록 시작, 잘하셨어요!',
+          message: 'GLUV를 시작하셨다는 것 자체로 훌륭해요! 식단과 혈당을 꾸준히 기록할수록 AI가 더 정확한 조언을 드릴 수 있어요.',
+          emoji: '🌟',
+          createdAt: new Date(),
+          isRead: false,
+        },
+        {
+          id: 'fallback_3',
+          type: 'prediction',
+          title: '🤔 식후 혈당도 체크해보세요!',
+          message: '식사 후 1~2시간 사이에 혈당을 측정하면 어떤 음식이 혈당에 영향을 주는지 파악할 수 있어요!',
+          emoji: '🤔',
+          actionLabel: '혈당 기록하기',
+          createdAt: new Date(),
+          isRead: false,
+        },
+      ];
+      setInsights(fallback);
+      if (fallback.length > 0) setExpandedId(fallback[0].id);
     } finally {
       setIsGenerating(false);
     }

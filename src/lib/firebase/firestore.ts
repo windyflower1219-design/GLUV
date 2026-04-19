@@ -17,7 +17,7 @@ import type { Meal, GlucoseReading } from '@/types';
 const db = getFirestore(app);
 
 // ---- Promise Timeout Wrapper ----
-const withTimeout = <T>(promise: Promise<T>, ms: number = 3000): Promise<T> => {
+const withTimeout = <T>(promise: Promise<T>, ms: number = 5000): Promise<T> => {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Firebase operation timed out.')), ms))

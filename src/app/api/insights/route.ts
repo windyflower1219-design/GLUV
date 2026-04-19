@@ -1,57 +1,65 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Gemma API 설정 (이전 Gemini 기반)
-const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
-
 export async function POST(req: Request) {
+  // 요청마다 키를 새로 읽음 (모듈 캐시 문제 방지)
+  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
+
   try {
-    const { userId, recentMeals, averageGlucose, isDemo } = await req.json();
+    const { userId, recentMeals, averageGlucose } = await req.json();
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'Gemma API key is missing' }, { status: 500 });
+      return NextResponse.json({ error: 'Gemini API key is missing' }, { status: 500 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemma-4' });
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-    const prompt = `
-      당신은 당뇨 예방 및 혈당 관리를 돕는 'GLUV' 앱의 따뜻하고 다정한 건강 비서입니다.
-      아래는 회원님("${userId}")의 최근 건강 데이터입니다:
-      - 평균 혈당: ${averageGlucose} mg/dL
-      - 최근 식사 기록: ${JSON.stringify(recentMeals)}
+    const mealsText = Array.isArray(recentMeals) && recentMeals.length > 0
+      ? recentMeals.join(', ')
+      : '아직 식사 기록 없음';
 
-      이 데이터를 바탕으로, 회원님을 위해 가장 유용한 행동 가능 인사이트(Actionable Insight) 3가지를 배열 형태로 제안해주세요.
-      배열의 각 항목은 다음 필드를 가져야 합니다:
-      id: "string", 랜덤 아이디값 (예: 'insight_1')
-      type: "spike_alert" | "prediction" | "recommendation" | "achievement" | "warning" 중 택일
-      title: "string", (예: '🚨 혈당이 조금 높아질 수 있어요!')
-      message: "string", (따뜻하고 다정하게, 공감하는 말투. '남편'이나 '아내' 같은 단어는 쓰지 마세요. 무조건 존댓말 사용)
-      emoji: "string", 1개의 이모지 (예: '🏃')
-      actionLabel: "string", (선택사항, 버튼 텍스트 예: '추천 운동 보기')
+    const glucoseText = averageGlucose && averageGlucose > 0
+      ? `${averageGlucose} mg/dL`
+      : '아직 혈당 기록 없음';
 
-      형식은 반드시 순수 JSON 배열이어야 합니다. 예:
-      [
-        {
-          "id": "insight_1",
-          "type": "recommendation",
-          "title": "💡 회원님을 위한 꿀팁",
-          "message": "최근 식단에 단백질이 조금 부족해보입니다. 닭가슴살 샐러드 어떠세요?",
-          "emoji": "🥗"
-        }
-      ]
-    `;
+    const prompt = `당신은 당뇨 예방 및 혈당 관리를 돕는 GLUV 앱의 따뜻하고 다정한 건강 비서입니다.
+
+회원님의 최근 건강 데이터:
+- 평균 혈당: ${glucoseText}
+- 최근 식사: ${mealsText}
+
+위 데이터를 바탕으로 맞춤형 인사이트 3가지를 JSON 배열로만 응답해주세요. 다른 설명 없이 JSON 배열만 출력하세요.
+
+응답 형식:
+[
+  {
+    "id": "insight_1",
+    "type": "recommendation",
+    "title": "💡 제목",
+    "message": "따뜻하고 다정한 존댓말로 작성된 내용. 남편/아내 등 호칭 사용 금지.",
+    "emoji": "💡",
+    "actionLabel": "버튼 텍스트 (선택사항)"
+  }
+]
+
+type 값은 spike_alert, prediction, recommendation, achievement, warning 중 하나.`;
 
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text();
+    const text = result.response.text().trim();
 
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const insights = JSON.parse(text);
+    // JSON 블록 추출 (```json ... ``` 또는 [ ... ] 형태 모두 처리)
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.error('Gemini did not return valid JSON array. Raw response:', text);
+      return NextResponse.json({ error: 'Invalid response format from Gemini' }, { status: 500 });
+    }
 
+    const insights = JSON.parse(jsonMatch[0]);
     return NextResponse.json({ insights }, { status: 200 });
+
   } catch (error: any) {
-    console.error('Insights API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Insights API Error:', error?.message || error);
+    return NextResponse.json({ error: error?.message || 'Unknown error' }, { status: 500 });
   }
 }

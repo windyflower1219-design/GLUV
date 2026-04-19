@@ -1,15 +1,5 @@
-// 음식 NLP 파서 (로컬 + OpenAI 하이브리드)
-import OpenAI from 'openai';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// 음식 NLP 파서 (서버사이드 API Route + 로컬 폴백)
 import type { FoodItem, VoiceParseResult, MeasurementType } from '@/types';
-
-// API 키 설정 (인사이트 등에 사용되는 제미니 유지, OpenAI 신규 추가)
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
-
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || '',
-  dangerouslyAllowBrowser: true,
-});
 
 // 한국 음식 영양 데이터베이스 (로컬 캐시)
 const KOREAN_FOOD_DB: Record<string, Omit<FoodItem, 'id' | 'quantity'>> = {
@@ -74,6 +64,8 @@ const KOREAN_FOOD_DB: Record<string, Omit<FoodItem, 'id' | 'quantity'>> = {
   '콜라': { name: '콜라', unit: '캔', carbs: 35, calories: 140, glycemicIndex: 65, protein: 0, fat: 0, sodium: 10 },
   '맥주': { name: '맥주', unit: '캔', carbs: 12, calories: 150, glycemicIndex: 85, protein: 1, fat: 0, sodium: 15 },
   '소주': { name: '소주', unit: '병', carbs: 0, calories: 400, glycemicIndex: 0, protein: 0, fat: 0, sodium: 0 },
+  '해장국': { name: '해장국', unit: '그릇', carbs: 20, calories: 450, glycemicIndex: 55, protein: 30, fat: 15, sodium: 1200 },
+  '황태 해장국': { name: '황태 해장국', unit: '그릇', carbs: 15, calories: 350, glycemicIndex: 50, protein: 25, fat: 10, sodium: 1100 },
 };
 
 // 수량 표현 파서
@@ -106,14 +98,20 @@ function findFoodInText(text: string): Array<{ foodKey: string; position: number
   const found: Array<{ foodKey: string; position: number }> = [];
   const foodKeys = Object.keys(KOREAN_FOOD_DB);
 
-  // 긴 이름 먼저 매칭 (예: "김치찌개"가 "찌개"보다 먼저)
+  // 긴 이름 먼저 매칭
   const sortedKeys = foodKeys.sort((a, b) => b.length - a.length);
 
   for (const key of sortedKeys) {
     const idx = text.indexOf(key);
     if (idx !== -1) {
       // 이미 매칭된 영역과 겹치지 않는지 확인
-      const overlaps = found.some(f => Math.abs(f.position - idx) < key.length);
+      const overlaps = found.some(f => {
+        const start1 = f.position;
+        const end1 = f.position + f.foodKey.length;
+        const start2 = idx;
+        const end2 = idx + key.length;
+        return Math.max(start1, start2) < Math.min(end1, end2); // 겹침 판별 (교집합 길이 > 0)
+      });
       if (!overlaps) {
         found.push({ foodKey: key, position: idx });
       }
@@ -129,71 +127,27 @@ function findFoodInText(text: string): Array<{ foodKey: string; position: number
 export async function parseMealText(
   voiceText: string,
 ): Promise<VoiceParseResult> {
-  const useOpenAI = !!process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+  // 서버사이드 API Route 호출 (API 키를 클라이언트에 노출하지 않음)
+  try {
+    const res = await fetch('/api/parse-meal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voiceText }),
+    });
 
-  if (useOpenAI) {
-    try {
-      const prompt = `
-        사용자의 음성 입력에서 음식 정보, 혈당 수치, 측정 시점을 추출해줘.
-        입력: "${voiceText}"
-
-        다음 JSON 형식으로만 응답해:
-        {
-          "parsedFoods": [
-            {
-              "name": "음식명",
-              "quantity": 수량(숫자),
-              "unit": "단위",
-              "carbs": 탄수화물(g),
-              "calories": 칼로리(kcal),
-              "glycemicIndex": 혈당지수(0-100),
-              "protein": 단백질(g),
-              "fat": 지방(g),
-              "sodium": 나트륨(mg)
-            }
-          ],
-          "glucoseValue": 혈당수치(숫자, 없으면 null),
-          "detectedMeasType": "fasting" | "postmeal_30m" | "postmeal_1h" | "postmeal_2h" | "random",
-          "detectedTime": "시간을 나타내는 문맥(예: '아침에', '점심', '저녁 7시')이 있으면 24시간 형식 HH:mm 으로 추정해줘 (아침이면 08:00, 점심이면 12:30, 저녁 7시면 19:00 등). 따로 언급이 없으면 null",
-          "needsClarification": 모호한 경우 true,
-          "clarificationQuestion": "모호한 경우 사용자에게 던질 친절한 질문"
-        }
-
-        지침:
-        1. 한국 음식 영양 정보를 바탕으로 최대한 정확한 수치를 넣어줘. 
-        2. 수량이나 단위가 없으면 1인분을 기준으로 해.
-        3. "혈당 120"과 같은 패턴이 있으면 glucoseValue에 숫자를 넣어.
-        4. 문맥상 "공복", "식후 1시간" 등이 있으면 detectedMeasType을 정해줘. 없으면 "random".
-        5. "아침에", "점심에", "어제 저녁" 등 시간적 맥락을 파악해서 detectedTime 에 HH:mm 형태로 넣어줘. (혈당/식단 시간을 사용자가 명시했다면 우선 존중)
-        6. 사용자를 대하듯 따뜻하고 다정한 말투로 질문을 생성해줘.
-      `;
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "system", content: prompt }],
-        response_format: { type: "json_object" }
-      });
-
-      const text = response.choices[0].message.content || '{}';
-      const data = JSON.parse(text);
-
-      return {
-        rawText: voiceText,
-        parsedFoods: (data.parsedFoods || []).map((f: any) => ({
-          ...f,
-          id: `food_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        })),
-        glucoseValue: data.glucoseValue || undefined,
-        detectedMeasType: (data.detectedMeasType as MeasurementType) || 'random',
-        detectedTime: data.detectedTime || undefined,
-        confidenceScore: 0.9,
-        needsClarification: !!data.needsClarification,
-        clarificationQuestion: data.clarificationQuestion,
-      };
-    } catch (error) {
-      console.warn('OpenAI Parsing Error, falling back to local fallback:', error);
-      // Fall through to local fallback
+    if (res.ok) {
+      const data = await res.json();
+      // API 키 없음 에러가 아닌 경우 반환
+      if (!data.error) {
+        return {
+          rawText: voiceText,
+          ...data,
+        };
+      }
+      console.warn('Parse API returned error:', data.error);
     }
+  } catch (error) {
+    console.warn('Server parse API failed, falling back to local:', error);
   }
 
   // --- Local Fallback Parser ---
@@ -206,6 +160,12 @@ export async function parseMealText(
   if (voiceText.includes('공복')) detectedMeasType = 'fasting';
   else if (voiceText.includes('식후 2시간')) detectedMeasType = 'postmeal_2h';
   else if (voiceText.includes('식후 1시간') || voiceText.includes('식후')) detectedMeasType = 'postmeal_1h';
+
+  // 간단한 시간 맥락 파싱 (아침, 점심, 저녁)
+  let detectedTime: string | undefined;
+  if (voiceText.includes('아침')) detectedTime = '08:00';
+  else if (voiceText.includes('점심')) detectedTime = '12:30';
+  else if (voiceText.includes('저녁')) detectedTime = '19:00';
 
   if (foundFoods.length > 0) {
     const parsedFoods = foundFoods.map(f => {
@@ -231,6 +191,7 @@ export async function parseMealText(
       parsedFoods,
       glucoseValue,
       detectedMeasType,
+      detectedTime,
       confidenceScore: 0.6,
       needsClarification: false,
     };

@@ -14,6 +14,26 @@ const GlucoseGauge: React.FC<GlucoseGaugeProps> = ({
     return <div className="skeleton w-48 h-48 rounded-full mx-auto" />;
   }
 
+  // 혈당 기록이 없을 경우 빈 상태 표시
+  if (!value || value === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4">
+        <div className="relative w-48 h-48 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border-8 border-gray-50 shadow-inner" />
+          <div className="absolute inset-4 rounded-full border-2 border-dashed border-gray-100" />
+          <div className="relative z-10 text-center px-4">
+            <span className="text-4xl block mb-2">💧</span>
+            <p className="text-sm font-black text-gray-400 leading-relaxed">아직 혈당 기록이<br/>없어요!</p>
+          </div>
+        </div>
+        <div className="px-6 py-2 rounded-2xl bg-gray-50 text-gray-400 shadow-sm border border-white flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+          <p className="text-xs font-black">혈당을 기록해보세요</p>
+        </div>
+      </div>
+    );
+  }
+
   const isHigh = value > targetMax;
   const isLow = value < targetMin;
   

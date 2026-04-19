@@ -46,10 +46,15 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const userId = user?.uid || 'guest';
   const [todayMeals, setTodayMeals] = useState<Meal[]>([]);
-  const [latestInsight] = useState('어제보다 혈당 관리가 안정적이에요! 남편분이 정성껏 준비한 저녁 식사 덕분일까요? 오늘도 화이팅! 💕');
+  const [latestInsight, setLatestInsight] = useState('오늘도 건강 기록을 남겨보세요! 꾸준한 기록이 건강 관리의 첫 걸음이에요 💕');
 
   const { currentGlucose, averageGlucose, timeInRange, getChartData, loading, fetchReadings } = useGlucoseData();
   const chartData = getChartData();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const fetchAllData = useCallback(async () => {
     try {
@@ -79,9 +84,11 @@ export default function DashboardPage() {
     return { text: '편안한 저녁이에요', icon: <Moon size={20} className="text-rose-400" /> };
   };
 
-  const greeting = getGreeting();
+  const greeting = isMounted ? getGreeting() : { text: '안녕하세요', icon: <Sun size={20} className="text-amber-400" /> };
   const totalCalories = todayMeals.reduce((s, m) => s + m.totalCalories, 0);
   const totalCarbs = todayMeals.reduce((s, m) => s + m.totalCarbs, 0);
+
+  if (!isMounted) return <div className="min-h-screen bg-[var(--color-bg-primary)] page-content"></div>;
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">

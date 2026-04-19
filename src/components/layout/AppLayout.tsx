@@ -51,6 +51,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     }
   };
 
+  const isLoginPage = pathname === '/login';
+
   return (
     <div className="max-w-md mx-auto min-h-screen relative shadow-2xl shadow-indigo-100/20 bg-white overflow-x-hidden">
       {/* 메인 페이지 콘텐츠 */}
@@ -58,14 +60,16 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {children}
       </main>
 
-      {/* 전역 플로팅 마이크 버튼 */}
-      <button
-        onClick={openVoiceInput}
-        className="fab-mic bg-gray-800 shadow-xl shadow-gray-200"
-        aria-label="오늘 뭐 드셨나요?"
-      >
-        <MicIcon size={28} className="text-white" />
-      </button>
+      {/* 전역 플로팅 마이크 버튼 - 로그인 페이지에선 숨김 */}
+      {!isLoginPage && (
+        <button
+          onClick={openVoiceInput}
+          className="fab-mic bg-gray-800 shadow-xl shadow-gray-200"
+          aria-label="오늘 뭐 드셨나요?"
+        >
+          <MicIcon size={28} className="text-white" />
+        </button>
+      )}
 
       {/* 전역 음성 입력 모달 */}
       {isOpen && (
@@ -76,8 +80,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         />
       )}
 
-      {/* 하단 네비게이션 */}
-      <BottomNavigation />
+      {/* 하단 네비게이션 - 로그인 페이지에선 숨김 */}
+      {!isLoginPage && <BottomNavigation />}
     </div>
   );
 };
