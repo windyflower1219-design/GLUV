@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   User, Target, Flame, Heart, 
   ChevronRight, LogOut, Loader2, Save, Sparkles
