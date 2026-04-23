@@ -413,7 +413,25 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
                              const newFoods = [...parseResult.parsedFoods];
                              newFoods[i] = { ...newFoods[i], carbs: parseFloat(e.target.value) || 0 };
                              setParseResult({ ...parseResult, parsedFoods: newFoods });
-                           }} className="w-12 font-black text-indigo-500 outline-none bg-transparent border-b border-dashed border-transparent hover:border-gray-200 focus:border-indigo-200 text-right" />
+                           }} className="w-10 font-black text-indigo-500 outline-none bg-transparent border-b border-dashed border-transparent hover:border-gray-200 focus:border-indigo-200 text-right" />
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px]">
+                        <span className="text-gray-400 font-bold">단백(g)</span>
+                        <input type="number" value={food.protein || 0} onChange={(e) => {
+                             if (!parseResult) return;
+                             const newFoods = [...parseResult.parsedFoods];
+                             newFoods[i] = { ...newFoods[i], protein: parseFloat(e.target.value) || 0 };
+                             setParseResult({ ...parseResult, parsedFoods: newFoods });
+                           }} className="w-10 font-black text-emerald-500 outline-none bg-transparent border-b border-dashed border-transparent hover:border-gray-200 focus:border-emerald-200 text-right" />
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px]">
+                        <span className="text-gray-400 font-bold">지방(g)</span>
+                        <input type="number" value={food.fat || 0} onChange={(e) => {
+                             if (!parseResult) return;
+                             const newFoods = [...parseResult.parsedFoods];
+                             newFoods[i] = { ...newFoods[i], fat: parseFloat(e.target.value) || 0 };
+                             setParseResult({ ...parseResult, parsedFoods: newFoods });
+                           }} className="w-10 font-black text-amber-500 outline-none bg-transparent border-b border-dashed border-transparent hover:border-gray-200 focus:border-amber-200 text-right" />
                       </div>
                     </div>
                   </div>
