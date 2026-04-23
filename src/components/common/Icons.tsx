@@ -5,7 +5,7 @@ import {
   Search, Bell, Plus, ChevronRight, ChevronDown, Trash2,
   Calendar, Activity, Target, Heart, Flame, Utensils,
   Moon, Sun, TrendingUp, TrendingDown, Minus, Camera, Filter, Award, Zap, Coffee, Loader2, Clock,
-  LogOut, Pencil, X, Check, Save, LucideSparkles as Sparkles, Settings
+  LogOut, Pencil, X, Check, Save, LucideSparkles as Sparkles, Settings, User
 } from 'lucide-react';
 
 interface IconProps {
@@ -38,5 +38,5 @@ export {
   Search, Bell, Plus, ChevronRight, ChevronDown, Trash2,
   Calendar, Activity, Target, Heart, Flame, Utensils,
   Moon, Sun, TrendingUp, TrendingDown, Minus, Camera, Filter, Award, Zap, Coffee, Loader2, Clock,
-  LogOut, Pencil, X, Check, Save, LucideSparkles as Sparkles, Settings
+  LogOut, Pencil, X, Check, Save, LucideSparkles as Sparkles, Settings, User
 };
