@@ -112,7 +112,7 @@ export default function InsightsPage() {
     const deficiencies = [];
     if (avg.protein < 20) deficiencies.push({ name: '단백질', reason: '근육 유지와 혈당 안정에 중요해요', query: '저당 고단백 식품' });
     // 식이섬유는 데이터에 없으므로 채소류 권장으로 대체
-    if (recentMealsData.filter(m => m.rawText.includes('채소') || m.rawText.includes('샐러드')).length < 3) {
+    if (recentMealsData.filter(m => m.rawVoiceInput?.includes('채소') || m.rawVoiceInput?.includes('샐러드')).length < 3) {
       deficiencies.push({ name: '식이섬유', reason: '혈당 흡수를 늦춰주는 역할을 해요', query: '신선한 샐러드 채소' });
     }
 
