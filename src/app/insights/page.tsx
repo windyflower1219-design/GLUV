@@ -236,26 +236,47 @@ export default function InsightsPage() {
       </header>
 
       <div className="px-5 space-y-6 pt-2 pb-10">
-        {/* 중앙 관리형 AI 지식 상태 바 */}
-        <div className="bg-white/80 rounded-3xl p-4 border border-[var(--color-border)] flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[var(--color-primary-soft)] flex items-center justify-center">
-              <Sparkles size={14} className="text-[var(--color-accent)]" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-[var(--color-text-primary)]">AI 건강 지침 동기화 완료</p>
-              <p className="text-[9px] font-bold text-[var(--color-text-muted)]">마지막 업데이트: {new Date().toLocaleDateString()} (v2.4)</p>
-            </div>
+        {/* 1. AI 생성 인사이트 섹션 (누락되었던 부분 복구) */}
+        {isGenerating ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white/40 rounded-[40px] border border-dashed border-gray-100">
+            <Loader2 size={32} className="text-[var(--color-accent)] animate-spin mb-4" />
+            <p className="text-xs font-black text-gray-400">AI가 당신의 건강 데이터를 정밀 분석 중...</p>
           </div>
-          <div className="px-3 py-1 bg-[var(--color-bg-primary)] rounded-full border border-[var(--color-border)]">
-             <p className="text-[9px] font-black text-[var(--color-accent)]">최신상태</p>
+        ) : (
+          <div className="space-y-4">
+            {insights.map((insight) => (
+              <div 
+                key={insight.id}
+                className={`bg-white rounded-[32px] p-6 shadow-sm border border-gray-50 relative overflow-hidden transition-all ${expandedId === insight.id ? 'ring-2 ring-[var(--color-primary-soft)]' : ''}`}
+                onClick={() => setExpandedId(expandedId === insight.id ? null : insight.id)}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${TYPE_COLORS[insight.type].bg}`}>
+                    {insight.emoji || '✨'}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${TYPE_COLORS[insight.type].badge}`}>
+                        {TYPE_FILTERS.find(f => f.key === insight.type)?.label || '분석'}
+                      </span>
+                      <p className="text-[9px] font-bold text-gray-300">{formatRelativeTime(insight.createdAt)}</p>
+                    </div>
+                    <h3 className="text-sm font-black text-[var(--color-text-primary)]">{insight.title}</h3>
+                    <p className={`text-[11px] font-bold text-[var(--color-text-secondary)] leading-relaxed mt-2 ${expandedId === insight.id ? '' : 'line-clamp-1'}`}>
+                      {insight.message}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className={`text-gray-300 mt-1 transition-transform ${expandedId === insight.id ? 'rotate-90' : ''}`} />
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
 
-        {/* 데이터 기반 분석 섹션 (생략된 기존 분석 카드들 유지...) */}
-        {dataDrivenInsights && (
+        {/* 2. 데이터 기반 심층 분석 섹션 */}
+        {dataDrivenInsights ? (
           <div className="space-y-6">
-            {/* 1. 혈당 유발 vs 안전 음식 (기존 코드와 동일) */}
+            {/* 혈당 민감 음식 분석 */}
             <div className="bg-white rounded-[40px] p-7 shadow-sm border border-[var(--color-border)]">
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-9 h-9 rounded-2xl bg-[var(--color-primary-soft)] flex items-center justify-center">
@@ -275,7 +296,7 @@ export default function InsightsPage() {
                       <p className="text-xs font-black text-[var(--color-text-primary)] truncate">{f.name}</p>
                       <p className="text-[10px] font-bold text-[var(--color-accent)] mt-1.5">평균 +{Math.round(f.avgSpike)} mg/dL</p>
                     </div>
-                  )) : <p className="text-[10px] text-[var(--color-text-muted)] px-1">데이터 분석 중...</p>}
+                  )) : <p className="text-[10px] text-gray-300 px-1">기록이 부족해요</p>}
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center gap-1.5 px-1 mb-1">
@@ -287,12 +308,12 @@ export default function InsightsPage() {
                       <p className="text-xs font-black text-[var(--color-text-primary)] truncate">{f.name}</p>
                       <p className="text-[10px] font-bold text-emerald-500 mt-1.5">안전함 ✨</p>
                     </div>
-                  )) : <p className="text-[10px] text-[var(--color-text-muted)] px-1">데이터 분석 중...</p>}
+                  )) : <p className="text-[10px] text-gray-300 px-1">기록이 부족해요</p>}
                 </div>
               </div>
             </div>
 
-            {/* 2. 영양학 분석 (수치 포함) */}
+            {/* 영양학 분석 */}
             <div className="bg-white rounded-[40px] p-7 shadow-sm border border-[var(--color-border)]">
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-9 h-9 rounded-2xl bg-[var(--color-primary-soft)] flex items-center justify-center">
@@ -323,33 +344,19 @@ export default function InsightsPage() {
                     </div>
 
                     <div className="flex gap-2.5">
-                      <a 
-                        href={`https://www.coupang.com/np/search?q=${encodeURIComponent(d.query)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 bg-white border border-[var(--color-border)] py-3 rounded-2xl text-[11px] font-black text-[var(--color-text-primary)] text-center hover:bg-[var(--color-bg-secondary)] transition-colors shadow-sm"
-                      >
-                        쿠팡 검색
-                      </a>
-                      <a 
-                        href={`https://www.kurly.com/search?keyword=${encodeURIComponent(d.query)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 bg-white border border-[var(--color-border)] py-3 rounded-2xl text-[11px] font-black text-[var(--color-text-primary)] text-center hover:bg-[var(--color-bg-secondary)] transition-colors shadow-sm"
-                      >
-                        마켓컬리
-                      </a>
+                      <a href={`https://www.coupang.com/np/search?q=${encodeURIComponent(d.query)}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-white border border-gray-100 py-3 rounded-2xl text-[11px] font-black text-center shadow-sm">쿠팡</a>
+                      <a href={`https://www.kurly.com/search?keyword=${encodeURIComponent(d.query)}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-white border border-gray-100 py-3 rounded-2xl text-[11px] font-black text-center shadow-sm">컬리</a>
                     </div>
                   </div>
                 )) : (
-                  <div className="bg-[var(--color-primary-soft)] p-6 rounded-[32px] border border-[var(--color-border)] text-center">
-                    <p className="text-xs font-black text-[var(--color-accent)]">영양 밸런스가 아주 훌륭해요! 🌸</p>
+                  <div className="bg-emerald-50 p-6 rounded-[32px] border border-emerald-100 text-center">
+                    <p className="text-xs font-black text-emerald-600">영양 밸런스가 아주 훌륭해요! 🌸</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* 3. 운동 가이드 & 유튜브 */}
+            {/* 운동 가이드 */}
             <div className="bg-[#5F4B4B] rounded-[40px] p-8 shadow-xl shadow-[#FFB7C5]/20 text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-10">
                 <Zap size={100} strokeWidth={3} />
@@ -360,32 +367,39 @@ export default function InsightsPage() {
                 </div>
                 <h2 className="text-sm font-black text-white/70 uppercase tracking-widest">최신 추천 운동</h2>
               </div>
-              
-              <div className="relative z-10">
-                <p className="text-xs font-black text-[var(--color-primary)] mb-1">식후 추천</p>
-                <h3 className="text-2xl font-black mb-3">{dataDrivenInsights.exerciseRec.type} {dataDrivenInsights.exerciseRec.duration}</h3>
-                <p className="text-[11px] font-bold text-white/50 leading-relaxed max-w-[85%] mb-8">
-                  {dataDrivenInsights.exerciseRec.reason}
-                </p>
-                
-                <a 
-                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(dataDrivenInsights.exerciseRec.ytQuery)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-[var(--color-primary)] text-white px-7 py-3.5 rounded-2xl text-xs font-black hover:bg-[var(--color-accent)] transition-all shadow-lg"
-                >
-                  <Sparkles size={14} />
-                  유튜브 가이드 보기
-                </a>
-              </div>
+              <h3 className="text-2xl font-black mb-3">{dataDrivenInsights.exerciseRec.type} {dataDrivenInsights.exerciseRec.duration}</h3>
+              <p className="text-[11px] font-bold text-white/50 leading-relaxed max-w-[85%] mb-8">{dataDrivenInsights.exerciseRec.reason}</p>
+              <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(dataDrivenInsights.exerciseRec.ytQuery)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[var(--color-primary)] text-white px-7 py-3.5 rounded-2xl text-xs font-black shadow-lg">
+                <Sparkles size={14} /> 유튜브 가이드
+              </a>
             </div>
+          </div>
+        ) : !isGenerating && (
+          <div className="py-20 text-center bg-white rounded-[40px] border border-gray-100">
+            <p className="text-xs font-bold text-gray-400">분석을 위한 데이터가 조금 더 필요해요! 📊</p>
           </div>
         )}
 
-        <div className="pt-6 pb-12 text-center">
-           <p className="text-[10px] font-bold text-[var(--color-text-muted)] leading-relaxed">
-             위 분석은 관리자가 검증한 AI 건강 규칙과<br/>
-             회원님의 실제 데이터를 기반으로 로컬에서 계산되었습니다.
+        {/* 3. 하단으로 이동한 AI 건강 지침 상태 바 (빨간 박스) */}
+        <div className="bg-white/80 rounded-3xl p-4 border border-[var(--color-border)] flex items-center justify-between shadow-sm mt-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-primary-soft)] flex items-center justify-center">
+              <Sparkles size={14} className="text-[var(--color-accent)]" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-[var(--color-text-primary)]">AI 건강 지침 동기화 완료</p>
+              <p className="text-[9px] font-bold text-[var(--color-text-muted)]">최종 업데이트: 2026. 4. 24. (v2.4)</p>
+            </div>
+          </div>
+          <div className="px-3 py-1 bg-[var(--color-bg-primary)] rounded-full border border-[var(--color-border)]">
+             <p className="text-[9px] font-black text-[var(--color-accent)]">최신상태</p>
+          </div>
+        </div>
+
+        {/* 4. 간소화된 분석 근거 문구 (파란 박스) */}
+        <div className="pt-4 pb-12 text-center">
+           <p className="text-[10px] font-black text-[var(--color-text-muted)] tracking-tight">
+             관리자 검증 AI 규칙 기반 맞춤형 로컬 분석
            </p>
         </div>
       </div>
