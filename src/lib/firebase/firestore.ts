@@ -381,6 +381,75 @@ export const saveParseCorrection = async (correction: Omit<ParseCorrection, 'id'
   }
 };
 
+// ============================
+// 사용자 프로필 및 설정
+// ============================
+export interface UserProfile {
+  targetKcal: number;
+  targetGlucoseMin: number;
+  targetGlucoseMax: number;
+  updatedAt?: Date;
+}
+
+const DEFAULT_PROFILE: UserProfile = {
+  targetKcal: 2000,
+  targetGlucoseMin: 70,
+  targetGlucoseMax: 140,
+};
+
+export const getUserProfile = async (userId: string): Promise<UserProfile> => {
+  const cacheK = `profile|${userId}`;
+  const cached = getCache<UserProfile>(cacheK);
+  if (cached) return cached;
+
+  try {
+    const q = query(collection(db, 'users'), where('userId', '==', userId));
+    const querySnapshot = await withTimeout(getDocs(q));
+    
+    if (querySnapshot.empty) {
+      return DEFAULT_PROFILE;
+    }
+
+    const data = querySnapshot.docs[0].data();
+    const profile = {
+      ...DEFAULT_PROFILE,
+      ...data,
+      updatedAt: data.updatedAt?.toDate(),
+    } as UserProfile;
+
+    setCache(cacheK, profile);
+    return profile;
+  } catch (error) {
+    console.warn('getUserProfile failed, using default:', error);
+    return DEFAULT_PROFILE;
+  }
+};
+
+export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>) => {
+  try {
+    const q = query(collection(db, 'users'), where('userId', '==', userId));
+    const querySnapshot = await withTimeout(getDocs(q));
+    
+    const payload = {
+      ...updates,
+      userId,
+      updatedAt: Timestamp.now(),
+    };
+
+    if (querySnapshot.empty) {
+      await withTimeout(addDoc(collection(db, 'users'), payload));
+    } else {
+      const docId = querySnapshot.docs[0].id;
+      await withTimeout(updateDoc(doc(db, 'users', docId), payload));
+    }
+    
+    invalidateCache('profile|');
+  } catch (error) {
+    console.error('updateUserProfile failed:', error);
+    throw error;
+  }
+};
+
 // 캐시를 수동으로 비워야 할 때 사용 (로그아웃 등)
 export const clearFirestoreCache = () => {
   READ_CACHE.clear();

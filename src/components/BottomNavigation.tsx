@@ -3,13 +3,14 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Utensils, Activity, Lightbulb } from 'lucide-react';
+import { Home, Utensils, Activity, Lightbulb, Settings } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: '홈' },
   { href: '/meals', icon: Utensils, label: '식단' },
   { href: '/glucose', icon: Activity, label: '혈당' },
   { href: '/insights', icon: Lightbulb, label: '인사이트' },
+  { href: '/profile', icon: Settings, label: '설정' },
 ];
 
 export default function BottomNavigation() {

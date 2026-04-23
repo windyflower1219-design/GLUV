@@ -3,12 +3,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Plus, Trash2, ChevronDown,
-  MicIcon, Loader2, Pencil, Check, X, Sparkles
+  MicIcon, Loader2, Pencil, Check, X, Sparkles, Flame
 } from '@/components/common/Icons';
 import PageHeader from '@/components/common/PageHeader';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
 import { calculateMealImpact } from '@/lib/algorithms/mealAnalysis';
-import { saveMeal, getMeals, deleteMeal, updateMeal, saveGlucose, getGlucoseReadings } from '@/lib/firebase/firestore';
+import { 
+  getMeals, saveMeal, deleteMeal, updateMeal, getGlucoseReadings,
+  getUserProfile, UserProfile
+} from '@/lib/firebase/firestore';
 import { useVoiceInputContext } from '@/context/VoiceInputContext';
 import { useUnifiedStorage } from '@/lib/hooks/useUnifiedStorage';
 import { useBackHandler } from '@/context/BackHandlerContext';
@@ -38,8 +41,8 @@ export default function MealsPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
   
-  const { openVoiceInput, isSubmitting, setIsSubmitting } = useVoiceInputContext();
-  const { saveUnifiedRecord } = useUnifiedStorage();
+  const { openVoiceInput } = useVoiceInputContext();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
   const [allRecentMeals, setAllRecentMeals] = useState<Meal[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -77,7 +80,6 @@ export default function MealsPage() {
     const totalCalories = foods.reduce((s, f) => s + (Number(f.calories) || 0) * (Number(f.quantity) || 1), 0);
     const prediction = predictGlucoseResponse(foods, 100);
 
-    // Optimistic update: 로컬 state를 먼저 반영해 UI 즉시 업데이트
     const prev = meals;
     setMeals((cur) =>
       cur.map((m) =>
@@ -106,7 +108,7 @@ export default function MealsPage() {
       window.dispatchEvent(new CustomEvent('record-saved'));
     } catch (err: any) {
       console.error('수정 실패, 롤백:', err);
-      setMeals(prev); // 롤백
+      setMeals(prev);
       alert(`수정에 실패했습니다: ${err?.message || err}`);
     } finally {
       setIsSavingEdit(false);
@@ -116,15 +118,16 @@ export default function MealsPage() {
   const fetchMeals = useCallback(async (showLoading = true) => {
     if (showLoading) setIsInitialLoading(true);
     try {
-      const data = await getMeals(userId, selectedDate);
+      const [data, readings, profile] = await Promise.all([
+        getMeals(userId, selectedDate),
+        getGlucoseReadings(userId, 48),
+        getUserProfile(userId)
+      ]);
       setMeals(data);
-      
-      // 혈당 데이터 가져오기 (선택된 날짜 기준 충분한 범위)
-      const readings = await getGlucoseReadings(userId, 48); // 48시간치
       setGlucoseReadings(readings);
+      setUserProfile(profile);
 
-      // 히스토리 계산을 위해 최근 식사 가져오기 (비동기로 별도 처리 가능하지만 여기선 단순화)
-      const recent = await getMeals(userId); // 전체/최근 데이터
+      const recent = await getMeals(userId);
       setAllRecentMeals(recent);
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -136,24 +139,21 @@ export default function MealsPage() {
   useEffect(() => {
     fetchMeals();
     
-    // 전역 저장 이벤트 리스너
     const handleRefresh = () => fetchMeals(false);
     window.addEventListener('record-saved', handleRefresh);
     return () => window.removeEventListener('record-saved', handleRefresh);
   }, [fetchMeals]);
 
   const handleDelete = async (id: string) => {
-    // Optimistic: 로컬 state에서 즉시 제거
     const prev = meals;
     setMeals((cur) => cur.filter((m) => m.id !== id));
     setDeletingId(null);
     try {
       await deleteMeal(id);
-      // 다른 페이지(대시보드)에서도 최신 상태 동기화
       window.dispatchEvent(new CustomEvent('record-saved'));
     } catch (err: any) {
       console.error('삭제 실패, 롤백:', err);
-      setMeals(prev); // 롤백
+      setMeals(prev);
       alert(`삭제에 실패했습니다: ${err?.message || err}`);
     }
   };
@@ -165,13 +165,13 @@ export default function MealsPage() {
   }, {} as Record<MealType, Meal[]>);
 
   const todayCalories = meals.reduce((s, m) => s + m.totalCalories, 0);
-  const todayCarbs = meals.reduce((s, m) => s + m.totalCarbs, 0);
+  const targetKcal = userProfile?.targetKcal || 2000;
+  const kcalPercentage = Math.min(Math.round((todayCalories / targetKcal) * 100), 100);
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">
       <PageHeader title="식단 기록" />
       
-      {/* 날짜 선택 섹션 (헤더 바로 아래 유지) */}
       <div className="px-5 py-3 sticky top-[72px] bg-[var(--color-bg-primary)]/90 backdrop-blur z-10 border-b border-[var(--color-border)]">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {[-3, -2, -1, 0, 1, 2, 3].map(offset => {
@@ -203,42 +203,27 @@ export default function MealsPage() {
       </div>
 
       <div className="px-4 space-y-5 pt-4">
-        {/* 오늘 요약 */}
         <div className="glass-card p-5 border-none shadow-sm relative overflow-hidden bg-white/50">
           <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--color-accent-pink)] opacity-5 rounded-full -mr-8 -mt-8" />
-          <p className="text-xs font-bold text-[var(--color-text-secondary)] mb-4 flex items-center gap-1">
-            <span className="w-1 h-3 bg-[var(--color-accent-pink)] rounded-full mr-1" />
-            오늘의 영양 소식
+          <p className="text-xs font-black text-rose-500 uppercase tracking-widest flex items-center gap-2 mb-4">
+            <Flame size={12} /> Today Calories
           </p>
-          <div className="flex justify-around items-end">
-            <div className="text-center">
-              <p className="text-2xl font-black text-[var(--color-danger)]">{todayCalories}</p>
-              <p className="text-[10px] font-bold text-[var(--color-text-secondary)]">칼로리 (kcal)</p>
-            </div>
-            <div className="w-px h-8 bg-gray-100" />
-            <div className="text-center">
-              <p className="text-2xl font-black text-[var(--color-warning)]">{todayCarbs}g</p>
-              <p className="text-[10px] font-bold text-[var(--color-text-secondary)]">탄수화물</p>
-            </div>
-            <div className="w-px h-8 bg-gray-100" />
-            <div className="text-center">
-              <p className="text-2xl font-black text-[var(--color-success)]">{meals.length}</p>
-              <p className="text-[10px] font-bold text-[var(--color-text-secondary)]">식사 횟수</p>
-            </div>
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className="text-2xl font-black text-gray-800">{todayCalories}</span>
+            <span className="text-xs font-bold text-gray-400">/ {targetKcal} kcal</span>
           </div>
           <div className="mt-5 h-3 rounded-full bg-gray-100 overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent-pink)] to-[var(--color-warning)] transition-all duration-500"
-              style={{ width: `${Math.min(100, (todayCalories / 2000) * 100)}%` }}
+              style={{ width: `${kcalPercentage}%` }}
             />
           </div>
           <div className="flex justify-between mt-2">
-            <span className="text-[10px] text-[var(--color-text-secondary)] font-medium">목표 2000 kcal</span>
-            <span className="text-[10px] text-[var(--color-text-secondary)] font-medium">남음 {Math.max(0, 2000 - todayCalories)} kcal</span>
+            <span className="text-[10px] text-[var(--color-text-secondary)] font-medium">목표 {targetKcal} kcal</span>
+            <span className="text-[10px] text-[var(--color-text-secondary)] font-medium">남음 {Math.max(0, targetKcal - todayCalories)} kcal</span>
           </div>
         </div>
 
-        {/* 입력 방법 버튼들 */}
         <div className="grid grid-cols-2 gap-3">
           {[
             { icon: <MicIcon size={22} />, label: '말하기', color: 'bg-blue-50 text-blue-500 border-blue-100', action: openVoiceInput },
@@ -255,7 +240,6 @@ export default function MealsPage() {
           ))}
         </div>
 
-        {/* 식사별 목록 */}
         <div className="space-y-6 pb-4">
           {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(type => {
             const typeMeals = groupedMeals[type] || [];
@@ -325,7 +309,6 @@ export default function MealsPage() {
                           </div>
 
                           {editingId === meal.id ? (
-                            // 수정 모드
                             <div className="space-y-2">
                               {editDraft.map((f, i) => (
                                 <div key={i} className="p-3 rounded-2xl border border-indigo-100 bg-indigo-50/30 space-y-2">
@@ -404,7 +387,6 @@ export default function MealsPage() {
                               </div>
                             </div>
                           ) : (
-                            // 보기 모드
                             <div className="space-y-2">
                               {meal.parsedFoods.map((f, i) => (
                                 <div key={i} className="flex items-center justify-between p-2 rounded-xl border border-gray-50">

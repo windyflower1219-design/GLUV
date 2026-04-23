@@ -10,7 +10,7 @@ import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
 import GlucoseGauge from '@/components/common/GlucoseGauge';
 import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
-import { getMeals } from '@/lib/firebase/firestore';
+import { getMeals, getUserProfile, UserProfile } from '@/lib/firebase/firestore';
 import type { Meal } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
@@ -49,6 +49,7 @@ export default function DashboardPage() {
   const [latestInsight, setLatestInsight] = useState('오늘도 건강 기록을 남겨보세요! 꾸준한 기록이 건강 관리의 첫 걸음이에요 💕');
 
   const { currentGlucose, averageGlucose, timeInRange, getChartData, loading, fetchReadings } = useGlucoseData();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const chartData = getChartData();
   const [isMounted, setIsMounted] = useState(false);
 
@@ -58,8 +59,12 @@ export default function DashboardPage() {
 
   const fetchAllData = useCallback(async () => {
     try {
-      const meals = await getMeals(userId, new Date());
+      const [meals, profile] = await Promise.all([
+        getMeals(userId, new Date()),
+        getUserProfile(userId)
+      ]);
       setTodayMeals(meals);
+      setUserProfile(profile);
       await fetchReadings();
     } catch (error) {
       console.error('Error fetching today data:', error);
@@ -148,6 +153,7 @@ export default function DashboardPage() {
             icon={<Utensils size={20} />}
             color="text-amber-500"
             bg="bg-amber-50"
+            trend={userProfile ? `목표 ${userProfile.targetKcal}kcal` : undefined}
           />
         </div>
 
@@ -190,9 +196,9 @@ export default function DashboardPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="6 6" stroke="#f8fafc" vertical={false} />
                 <XAxis dataKey="time" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={5} />
-                <YAxis domain={[60, 200]} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} tickLine={false} axisLine={false} />
-                <ReferenceLine y={140} stroke="#fda4af" strokeDasharray="4 4" />
-                <ReferenceLine y={70} stroke="#fde68a" strokeDasharray="4 4" />
+                <YAxis domain={[40, 240]} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} tickLine={false} axisLine={false} />
+                <ReferenceLine y={userProfile?.targetGlucoseMax || 140} stroke="#fda4af" strokeDasharray="4 4" label={{ value: 'MAX', position: 'right', fill: '#fda4af', fontSize: 8, fontWeight: 'bold' }} />
+                <ReferenceLine y={userProfile?.targetGlucoseMin || 70} stroke="#fde68a" strokeDasharray="4 4" label={{ value: 'MIN', position: 'right', fill: '#fde68a', fontSize: 8, fontWeight: 'bold' }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area
                   type="monotone"
