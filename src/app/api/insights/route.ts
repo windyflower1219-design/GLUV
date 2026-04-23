@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' }, { apiVersion: 'v1' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash' }, { apiVersion: 'v1' });
 
     const mealsText = Array.isArray(recentMeals) && recentMeals.length > 0
       ? recentMeals.join(', ')
