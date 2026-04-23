@@ -128,11 +128,30 @@ export function useGlucoseData() {
       .filter(r => r.timestamp >= cutoff)
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-    return filtered.map(r => ({
-      time: period === 'day' 
-        ? r.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-        : r.timestamp.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }),
-      glucose: r.value,
+    if (period === 'day') {
+      return filtered.map(r => ({
+        time: r.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+        glucose: r.value,
+        targetMin: 70,
+        targetMax: 140,
+      }));
+    }
+
+    // 주간/월간의 경우 일별 평균값으로 그룹화
+    const groupedData: Record<string, { total: number; count: number; date: Date }> = {};
+    
+    filtered.forEach(r => {
+      const dateKey = r.timestamp.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+      if (!groupedData[dateKey]) {
+        groupedData[dateKey] = { total: 0, count: 0, date: r.timestamp };
+      }
+      groupedData[dateKey].total += r.value;
+      groupedData[dateKey].count += 1;
+    });
+
+    return Object.entries(groupedData).map(([time, data]) => ({
+      time,
+      glucose: Math.round(data.total / data.count),
       targetMin: 70,
       targetMax: 140,
     }));
