@@ -9,7 +9,6 @@ import {
 import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
 import GlucoseGauge from '@/components/common/GlucoseGauge';
-import ExitConfirmation from '@/components/ExitConfirmation';
 import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
 import { getMeals } from '@/lib/firebase/firestore';
 import type { Meal } from '@/types';
@@ -93,9 +92,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">
-      {/* 홈에서 뒤로가기 시 종료 확인 */}
-      <ExitConfirmation />
-
       <PageHeader
         title="GLUV"
         showBranding={true}

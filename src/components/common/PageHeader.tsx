@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bell, LogOut, Loader2 } from './Icons';
 import { useAuth } from '@/context/AuthContext';
+import { useBackHandler } from '@/context/BackHandlerContext';
 
 interface PageHeaderProps {
   title: string;
@@ -22,6 +23,15 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // 로그아웃 모달 열려있을 때 back 제스처 처리: 먼저 모달만 닫힘
+  useBackHandler(() => {
+    if (confirmOpen && !loggingOut) {
+      setConfirmOpen(false);
+      return true;
+    }
+    return false;
+  }, confirmOpen);
 
   const handleLogout = async () => {
     try {

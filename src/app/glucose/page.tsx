@@ -10,6 +10,7 @@ import PageHeader from '@/components/common/PageHeader';
 import StatCard from '@/components/common/StatCard';
 import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
 import { analyzeWeeklyTrend } from '@/lib/algorithms/glucoseAnalysis';
+import { useBackHandler } from '@/context/BackHandlerContext';
 import type { GlucoseReading } from '@/types';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -72,6 +73,27 @@ export default function GlucosePage() {
   const [editType, setEditType] = useState<GlucoseReading['measurementType']>('random');
   const [editTime, setEditTime] = useState<string>('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // 삭제 확인 → 편집 모드 → 추가 모달 순으로 우선 소비 (LIFO 역순)
+  useBackHandler(() => {
+    if (confirmDeleteId) { setConfirmDeleteId(null); return true; }
+    return false;
+  }, !!confirmDeleteId);
+
+  useBackHandler(() => {
+    if (editingId) {
+      setEditingId(null);
+      setEditValue('');
+      setEditTime('');
+      return true;
+    }
+    return false;
+  }, !!editingId);
+
+  useBackHandler(() => {
+    if (showAddModal) { setShowAddModal(false); return true; }
+    return false;
+  }, showAddModal);
 
   const startEdit = (reading: GlucoseReading) => {
     const tzoffset = reading.timestamp.getTimezoneOffset() * 60000;
@@ -265,7 +287,6 @@ export default function GlucosePage() {
                <span className="w-1.5 h-4 bg-indigo-400 rounded-full mr-1" />
               최근 혈당 기록
             </h2>
-            <button className="text-[10px] font-bold text-[var(--color-accent-pink)]">전체보기</button>
           </div>
           
           <div className="space-y-3">

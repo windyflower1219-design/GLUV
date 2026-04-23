@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Zap, ChevronRight, CheckCircle, Bell, TrendingUp, Award, Filter, Sparkles, Heart, Star, Info, Loader2 } from 'lucide-react';
+import { Zap, ChevronRight, CheckCircle, Bell, TrendingUp, Award, Sparkles, Heart, Star, Info, Loader2 } from 'lucide-react';
 import BottomNavigation from '@/components/BottomNavigation';
 import type { ActionableInsight } from '@/types';
 import { useAuth } from '@/context/AuthContext';
@@ -134,9 +134,6 @@ export default function InsightsPage() {
               <p className="text-xs font-bold text-rose-500 mt-0.5">{unreadCount}개의 새로운 소식이 있어요!</p>
             )}
           </div>
-          <button className="w-10 h-10 rounded-2xl bg-white shadow-sm border border-gray-50 flex items-center justify-center">
-            <Filter size={18} className="text-gray-400" />
-          </button>
         </div>
 
         {/* 필터 탭 */}
@@ -263,14 +260,6 @@ export default function InsightsPage() {
                     />
                   </div>
 
-                  {/* 확장 시 액션 버튼 */}
-                  {isExpanded && insight.actionLabel && (
-                    <div className="mt-6 pt-6 border-t border-gray-50 flex justify-end">
-                      <button className="bg-gray-800 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-lg shadow-gray-200 active:scale-95 transition-all flex items-center gap-2">
-                        {insight.actionLabel} <Star size={14} className="text-yellow-300" />
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             );

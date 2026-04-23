@@ -2,14 +2,15 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  Plus, Camera, Trash2, ChevronDown,
-  Search, MicIcon, Loader2, Pencil, Check, X
+  Plus, Trash2, ChevronDown,
+  MicIcon, Loader2, Pencil, Check, X
 } from '@/components/common/Icons';
 import PageHeader from '@/components/common/PageHeader';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
 import { saveMeal, getMeals, deleteMeal, updateMeal, saveGlucose } from '@/lib/firebase/firestore';
 import { useVoiceInputContext } from '@/context/VoiceInputContext';
 import { useUnifiedStorage } from '@/lib/hooks/useUnifiedStorage';
+import { useBackHandler } from '@/context/BackHandlerContext';
 import type { FoodItem, Meal, MealType, MeasurementType } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
@@ -157,14 +158,7 @@ export default function MealsPage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">
-      <PageHeader 
-        title="식단 기록" 
-        rightElement={
-          <button className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center border border-[var(--color-border)]">
-            <Search size={18} className="text-[var(--color-text-secondary)]" />
-          </button>
-        }
-      />
+      <PageHeader title="식단 기록" />
       
       {/* 날짜 선택 섹션 (헤더 바로 아래 유지) */}
       <div className="px-5 py-3 sticky top-[72px] bg-[var(--color-bg-primary)]/90 backdrop-blur z-10 border-b border-[var(--color-border)]">
@@ -234,10 +228,9 @@ export default function MealsPage() {
         </div>
 
         {/* 입력 방법 버튼들 */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {[
             { icon: <MicIcon size={22} />, label: '말하기', color: 'bg-blue-50 text-blue-500 border-blue-100', action: openVoiceInput },
-            { icon: <Camera size={22} />, label: '사진찍기', color: 'bg-emerald-50 text-emerald-500 border-emerald-100', action: () => {} },
             { icon: <Plus size={22} />, label: '직접쓰기', color: 'bg-slate-50 text-slate-500 border-slate-100', action: openVoiceInput },
           ].map(({ icon, label, color, action }) => (
             <button

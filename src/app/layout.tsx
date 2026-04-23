@@ -31,6 +31,7 @@ export const viewport: Viewport = {
 
 import { AuthProvider } from '@/context/AuthContext';
 import { VoiceInputProvider } from '@/context/VoiceInputContext';
+import { BackHandlerProvider } from '@/context/BackHandlerContext';
 import AppLayout from '@/components/layout/AppLayout';
 
 export default function RootLayout({
@@ -46,11 +47,13 @@ export default function RootLayout({
       </head>
       <body className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] antialiased overscroll-none">
         <AuthProvider>
-          <VoiceInputProvider>
-            <AppLayout>
-              {children}
-            </AppLayout>
-          </VoiceInputProvider>
+          <BackHandlerProvider>
+            <VoiceInputProvider>
+              <AppLayout>
+                {children}
+              </AppLayout>
+            </VoiceInputProvider>
+          </BackHandlerProvider>
         </AuthProvider>
       </body>
     </html>
