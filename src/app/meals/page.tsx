@@ -12,7 +12,7 @@ import { saveMeal, getMeals, deleteMeal, updateMeal, saveGlucose, getGlucoseRead
 import { useVoiceInputContext } from '@/context/VoiceInputContext';
 import { useUnifiedStorage } from '@/lib/hooks/useUnifiedStorage';
 import { useBackHandler } from '@/context/BackHandlerContext';
-import type { FoodItem, Meal, MealType, MeasurementType } from '@/types';
+import type { FoodItem, Meal, MealType, MeasurementType, GlucoseReading } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
 const MEAL_TYPE_LABELS: Record<MealType, { label: string; emoji: string; color: string; bg: string }> = {
