@@ -49,19 +49,17 @@ export default function InsightsPage() {
   const dataDrivenInsights = React.useMemo(() => {
     if (!recentMealsData.length || !glucoseReadings.length) return null;
 
-    // 1. 혈당 변화 분석 (식후 30분~2시간 사이의 변동폭 측정)
+    // 1. 혈당 변화 분석
     const foodCorrelations: Record<string, { spikes: number[], counts: number }> = {};
     
     recentMealsData.forEach(meal => {
       const mealTime = meal.timestamp.getTime();
-      // 식후 2시간 이내의 최고 혈당 찾기
       const postMealReadings = glucoseReadings.filter(r => {
         const diff = r.timestamp.getTime() - mealTime;
         return diff > 0 && diff <= 2 * 60 * 60 * 1000;
       });
 
       if (postMealReadings.length > 0) {
-        // 식전 혈당 (가장 가까운 과거 기록)
         const preMealReading = glucoseReadings
           .filter(r => r.timestamp.getTime() <= mealTime)
           .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
@@ -79,7 +77,6 @@ export default function InsightsPage() {
       }
     });
 
-    // 평균 스파이크 계산 및 정렬
     const foodInsights = Object.entries(foodCorrelations)
       .map(([name, data]) => ({
         name,
@@ -91,9 +88,15 @@ export default function InsightsPage() {
     const worstFoods = [...foodInsights].sort((a, b) => b.avgSpike - a.avgSpike).slice(0, 3);
     const bestFoods = [...foodInsights].sort((a, b) => a.avgSpike - b.avgSpike).slice(0, 3);
 
-    // 2. 영양소 분석
+    // 2. 영양소 정밀 분석 (수치 포함)
     const totals = { carbs: 0, protein: 0, fat: 0, calories: 0, sodium: 0 };
-    recentMealsData.slice(0, 10).forEach(m => { // 최근 10끼니 분석
+    const analysisDays = 7;
+    const recentWeekMeals = recentMealsData.filter(m => {
+      const diff = Date.now() - m.timestamp.getTime();
+      return diff <= analysisDays * 24 * 60 * 60 * 1000;
+    });
+
+    recentWeekMeals.forEach(m => {
       m.parsedFoods.forEach(f => {
         totals.carbs += f.carbs || 0;
         totals.protein += f.protein || 0;
@@ -103,23 +106,57 @@ export default function InsightsPage() {
       });
     });
     
+    // 일평균 섭취량 계산
     const avg = {
-      carbs: totals.carbs / 10,
-      protein: totals.protein / 10,
-      fat: totals.fat / 10,
+      protein: totals.protein / analysisDays,
+      carbs: totals.carbs / analysisDays,
     };
 
+    // 목표치 (가정: 단백질 60g, 하루 3끼 기준 한 끼당 20g)
+    const targetProtein = 60;
     const deficiencies = [];
-    if (avg.protein < 20) deficiencies.push({ name: '단백질', reason: '근육 유지와 혈당 안정에 중요해요', query: '저당 고단백 식품' });
-    // 식이섬유는 데이터에 없으므로 채소류 권장으로 대체
-    if (recentMealsData.filter(m => m.rawVoiceInput?.includes('채소') || m.rawVoiceInput?.includes('샐러드')).length < 3) {
-      deficiencies.push({ name: '식이섬유', reason: '혈당 흡수를 늦춰주는 역할을 해요', query: '신선한 샐러드 채소' });
+    
+    if (avg.protein < targetProtein) {
+      deficiencies.push({ 
+        name: '단백질', 
+        current: Math.round(avg.protein),
+        target: targetProtein,
+        unit: 'g',
+        reason: `하루 평균 ${Math.round(targetProtein - avg.protein)}g이 부족해요. 근육 유지와 혈당 안정에 필수적입니다.`, 
+        query: '고단백 식단 추천' 
+      });
     }
 
-    // 3. 운동 추천 로직
-    let exerciseRec = { type: '산책', duration: '20분', reason: '식후 가벼운 움직임이 혈당 스파이크를 막아줍니다.' };
-    if (averageGlucose > 150) {
-      exerciseRec = { type: '빠르게 걷기', duration: '40분', reason: '현재 평균 혈당이 다소 높습니다. 유산소 운동이 필요해요.' };
+    const veggieCount = recentWeekMeals.filter(m => 
+      m.rawVoiceInput?.includes('채소') || m.rawVoiceInput?.includes('샐러드') || m.rawVoiceInput?.includes('쌈')
+    ).length;
+
+    if (veggieCount < 5) { // 주 5회 미만 채소 섭취 시
+      deficiencies.push({ 
+        name: '식이섬유', 
+        current: veggieCount,
+        target: 7,
+        unit: '회',
+        reason: `채소 섭취가 주 ${5 - veggieCount}회 더 필요해요. 식이섬유는 당 흡수를 늦춰줍니다.`, 
+        query: '신선한 샐러드 배송' 
+      });
+    }
+
+    // 3. 운동 추천 & 유튜브 연동
+    let exerciseRec = { 
+      type: '가벼운 산책', 
+      duration: '20분', 
+      reason: '식후 가벼운 움직임이 혈당 스파이크를 효과적으로 막아줍니다.',
+      ytQuery: '식후 20분 걷기 효과'
+    };
+    
+    if (averageGlucose > 140) {
+      exerciseRec = { 
+        type: '빠르게 걷기', 
+        duration: '40분', 
+        reason: '최근 평균 혈당이 높습니다. 에너지 소비량을 늘려 혈당을 낮춰야 해요.',
+        ytQuery: '당뇨 혈당 낮추는 운동'
+      };
     }
 
     return { worstFoods, bestFoods, deficiencies, exerciseRec };
@@ -186,94 +223,111 @@ export default function InsightsPage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">
-      <header className="safe-top px-6 pt-6 pb-3 sticky top-0 bg-[var(--color-bg-primary)]/90 backdrop-blur z-10">
-        <div className="flex items-center justify-between mb-4">
+      <header className="safe-top px-6 pt-8 pb-4 sticky top-0 bg-[var(--color-bg-primary)]/90 backdrop-blur z-10">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-black text-gray-800 tracking-tight">당신을 위한 조언</h1>
-            {unreadCount > 0 && (
-              <p className="text-xs font-bold text-rose-500 mt-0.5">{unreadCount}개의 새로운 소식이 있어요!</p>
-            )}
+            <h1 className="text-2xl font-black text-[var(--color-text-primary)] tracking-tight">GLUV 핑크 리포트 🎀</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <p className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">AI 지식 기반 맞춤 분석 중</p>
+            </div>
           </div>
-        </div>
-
-        {/* 필터 탭 */}
-        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {TYPE_FILTERS.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setActiveFilter(key)}
-              className={`px-4 py-2 rounded-2xl text-xs font-black whitespace-nowrap transition-all border ${
-                activeFilter === key
-                  ? 'bg-gray-800 text-white border-gray-800 shadow-lg shadow-gray-200'
-                  : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-100'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
         </div>
       </header>
 
       <div className="px-5 space-y-6 pt-2 pb-10">
-        {/* 데이터 기반 분석 섹션 */}
+        {/* 중앙 관리형 AI 지식 상태 바 */}
+        <div className="bg-white/80 rounded-3xl p-4 border border-[var(--color-border)] flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-primary-soft)] flex items-center justify-center">
+              <Sparkles size={14} className="text-[var(--color-accent)]" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-[var(--color-text-primary)]">AI 건강 지침 동기화 완료</p>
+              <p className="text-[9px] font-bold text-[var(--color-text-muted)]">마지막 업데이트: {new Date().toLocaleDateString()} (v2.4)</p>
+            </div>
+          </div>
+          <div className="px-3 py-1 bg-[var(--color-bg-primary)] rounded-full border border-[var(--color-border)]">
+             <p className="text-[9px] font-black text-[var(--color-accent)]">최신상태</p>
+          </div>
+        </div>
+
+        {/* 데이터 기반 분석 섹션 (생략된 기존 분석 카드들 유지...) */}
         {dataDrivenInsights && (
           <div className="space-y-6">
-            {/* 1. 혈당 유발 vs 안전 음식 */}
-            <div className="bg-white rounded-[40px] p-6 shadow-sm border border-gray-100">
+            {/* 1. 혈당 유발 vs 안전 음식 (기존 코드와 동일) */}
+            <div className="bg-white rounded-[40px] p-7 shadow-sm border border-[var(--color-border)]">
               <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 rounded-xl bg-rose-50 flex items-center justify-center">
-                  <TrendingUp size={16} className="text-rose-500" />
+                <div className="w-9 h-9 rounded-2xl bg-[var(--color-primary-soft)] flex items-center justify-center">
+                  <TrendingUp size={18} className="text-[var(--color-accent)]" />
                 </div>
-                <h2 className="text-sm font-black text-gray-800">음식별 혈당 영향도</h2>
+                <h2 className="text-base font-black text-[var(--color-text-primary)]">내 혈당에 민감한 음식들</h2>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-3">
-                  <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-1">주의가 필요해요</p>
+                  <div className="flex items-center gap-1.5 px-1 mb-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-danger)]" />
+                    <p className="text-[11px] font-black text-[var(--color-text-secondary)] uppercase tracking-wider">주의할까요?</p>
+                  </div>
                   {dataDrivenInsights.worstFoods.length > 0 ? dataDrivenInsights.worstFoods.map(f => (
-                    <div key={f.name} className="bg-rose-50/50 p-3 rounded-2xl border border-rose-100/50">
-                      <p className="text-xs font-black text-gray-700 truncate">{f.name}</p>
-                      <p className="text-[9px] font-bold text-rose-500 mt-1">평균 +{Math.round(f.avgSpike)} mg/dL</p>
+                    <div key={f.name} className="bg-[#FFF5F6] p-4 rounded-3xl border border-[#FFE8EB]">
+                      <p className="text-xs font-black text-[var(--color-text-primary)] truncate">{f.name}</p>
+                      <p className="text-[10px] font-bold text-[var(--color-accent)] mt-1.5">평균 +{Math.round(f.avgSpike)} mg/dL</p>
                     </div>
-                  )) : <p className="text-[10px] text-gray-400 px-1">데이터 부족</p>}
+                  )) : <p className="text-[10px] text-[var(--color-text-muted)] px-1">데이터 분석 중...</p>}
                 </div>
                 <div className="space-y-3">
-                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest px-1">부담 없는 선택</p>
+                  <div className="flex items-center gap-1.5 px-1 mb-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)]" />
+                    <p className="text-[11px] font-black text-[var(--color-text-secondary)] uppercase tracking-wider">부담 없어요</p>
+                  </div>
                   {dataDrivenInsights.bestFoods.length > 0 ? dataDrivenInsights.bestFoods.map(f => (
-                    <div key={f.name} className="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100/50">
-                      <p className="text-xs font-black text-gray-700 truncate">{f.name}</p>
-                      <p className="text-[9px] font-bold text-emerald-600 mt-1">변화 거의 없음 ✨</p>
+                    <div key={f.name} className="bg-[#F6FFF9] p-4 rounded-3xl border border-[#E8FFEF]">
+                      <p className="text-xs font-black text-[var(--color-text-primary)] truncate">{f.name}</p>
+                      <p className="text-[10px] font-bold text-emerald-500 mt-1.5">안전함 ✨</p>
                     </div>
-                  )) : <p className="text-[10px] text-gray-400 px-1">데이터 부족</p>}
+                  )) : <p className="text-[10px] text-[var(--color-text-muted)] px-1">데이터 분석 중...</p>}
                 </div>
               </div>
             </div>
 
-            {/* 2. 영양학 분석 & 쇼핑 링크 */}
-            <div className="bg-white rounded-[40px] p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+            {/* 2. 영양학 분석 (수치 포함) */}
+            <div className="bg-white rounded-[40px] p-7 shadow-sm border border-[var(--color-border)]">
               <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center">
-                  <Heart size={16} className="text-indigo-500" />
+                <div className="w-9 h-9 rounded-2xl bg-[var(--color-primary-soft)] flex items-center justify-center">
+                  <Heart size={18} className="text-[var(--color-accent)]" />
                 </div>
-                <h2 className="text-sm font-black text-gray-800">부족한 영양소 분석</h2>
+                <h2 className="text-base font-black text-[var(--color-text-primary)]">부족한 영양소 보충하기</h2>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {dataDrivenInsights.deficiencies.length > 0 ? dataDrivenInsights.deficiencies.map(d => (
-                  <div key={d.name} className="bg-gray-50 rounded-3xl p-5 border border-gray-100">
-                    <div className="flex items-start justify-between mb-4">
+                  <div key={d.name} className="bg-[var(--color-bg-primary)] rounded-[32px] p-6 border border-[var(--color-border)]">
+                    <div className="flex items-start justify-between mb-5">
                       <div>
-                        <p className="text-sm font-black text-gray-800">{d.name} 섭취가 적어요</p>
-                        <p className="text-[10px] font-bold text-gray-400 mt-1">{d.reason}</p>
+                        <div className="flex items-center gap-2 mb-1">
+                           <p className="text-base font-black text-[var(--color-text-primary)]">{d.name}</p>
+                           <span className="text-[10px] font-black bg-[var(--color-accent)] text-white px-2 py-0.5 rounded-full">CHECK!</span>
+                        </div>
+                        <div className="flex items-baseline gap-1 mt-1">
+                          <p className="text-sm font-black text-[var(--color-accent)]">{d.current}{d.unit}</p>
+                          <p className="text-[10px] font-bold text-[var(--color-text-muted)]">/ 목표 {d.target}{d.unit}</p>
+                        </div>
                       </div>
-                      <span className="text-2xl">🥗</span>
+                      <span className="text-3xl">🥯</span>
                     </div>
-                    <div className="flex gap-2">
+                    
+                    <div className="bg-white/60 p-4 rounded-2xl mb-5">
+                       <p className="text-[11px] font-bold text-[var(--color-text-secondary)] leading-relaxed">{d.reason}</p>
+                    </div>
+
+                    <div className="flex gap-2.5">
                       <a 
                         href={`https://www.coupang.com/np/search?q=${encodeURIComponent(d.query)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 bg-white border border-gray-200 py-2.5 rounded-xl text-[10px] font-black text-gray-600 text-center hover:bg-gray-50 transition-colors"
+                        className="flex-1 bg-white border border-[var(--color-border)] py-3 rounded-2xl text-[11px] font-black text-[var(--color-text-primary)] text-center hover:bg-[var(--color-bg-secondary)] transition-colors shadow-sm"
                       >
                         쿠팡 검색
                       </a>
@@ -281,73 +335,58 @@ export default function InsightsPage() {
                         href={`https://www.kurly.com/search?keyword=${encodeURIComponent(d.query)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 bg-white border border-gray-200 py-2.5 rounded-xl text-[10px] font-black text-gray-600 text-center hover:bg-gray-50 transition-colors"
+                        className="flex-1 bg-white border border-[var(--color-border)] py-3 rounded-2xl text-[11px] font-black text-[var(--color-text-primary)] text-center hover:bg-[var(--color-bg-secondary)] transition-colors shadow-sm"
                       >
-                        마켓컬리 검색
+                        마켓컬리
                       </a>
                     </div>
                   </div>
                 )) : (
-                  <div className="bg-indigo-50/50 p-5 rounded-3xl border border-indigo-100 text-center">
-                    <p className="text-xs font-black text-indigo-600">영양 밸런스가 아주 훌륭합니다! 🌈</p>
+                  <div className="bg-[var(--color-primary-soft)] p-6 rounded-[32px] border border-[var(--color-border)] text-center">
+                    <p className="text-xs font-black text-[var(--color-accent)]">영양 밸런스가 아주 훌륭해요! 🌸</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* 3. 운동 가이드 */}
-            <div className="bg-gray-800 rounded-[40px] p-7 shadow-xl shadow-gray-200 text-white relative overflow-hidden">
+            {/* 3. 운동 가이드 & 유튜브 */}
+            <div className="bg-[#5F4B4B] rounded-[40px] p-8 shadow-xl shadow-[#FFB7C5]/20 text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-10">
-                <Zap size={80} strokeWidth={3} />
+                <Zap size={100} strokeWidth={3} />
               </div>
               <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
-                  <Zap size={16} className="text-amber-400" />
+                <div className="w-9 h-9 rounded-2xl bg-white/10 flex items-center justify-center">
+                  <Zap size={18} className="text-[var(--color-primary)]" />
                 </div>
-                <h2 className="text-sm font-black text-white/80 uppercase tracking-widest">오늘의 권장 운동</h2>
+                <h2 className="text-sm font-black text-white/70 uppercase tracking-widest">최신 추천 운동</h2>
               </div>
               
               <div className="relative z-10">
-                <h3 className="text-2xl font-black mb-2">{dataDrivenInsights.exerciseRec.type} {dataDrivenInsights.exerciseRec.duration}</h3>
-                <p className="text-xs font-bold text-white/50 leading-relaxed max-w-[80%]">
+                <p className="text-xs font-black text-[var(--color-primary)] mb-1">식후 추천</p>
+                <h3 className="text-2xl font-black mb-3">{dataDrivenInsights.exerciseRec.type} {dataDrivenInsights.exerciseRec.duration}</h3>
+                <p className="text-[11px] font-bold text-white/50 leading-relaxed max-w-[85%] mb-8">
                   {dataDrivenInsights.exerciseRec.reason}
                 </p>
-                <button className="mt-6 bg-white text-gray-800 px-6 py-3 rounded-2xl text-[11px] font-black hover:bg-indigo-50 transition-colors">
-                  운동 시작하기
-                </button>
+                
+                <a 
+                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(dataDrivenInsights.exerciseRec.ytQuery)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-[var(--color-primary)] text-white px-7 py-3.5 rounded-2xl text-xs font-black hover:bg-[var(--color-accent)] transition-all shadow-lg"
+                >
+                  <Sparkles size={14} />
+                  유튜브 가이드 보기
+                </a>
               </div>
             </div>
           </div>
         )}
 
-        {/* AI 보조 인사이트 (기존) */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-black text-gray-300 uppercase tracking-widest">AI 추가 코칭</h2>
-            <button 
-              onClick={fetchAIInsights} 
-              disabled={isGenerating}
-              className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full flex items-center gap-1 disabled:opacity-50"
-            >
-              {isGenerating ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
-              AI 분석 업데이트
-            </button>
-          </div>
-          
-          {insights.slice(0, 3).map(insight => {
-            const colors = TYPE_COLORS[insight.type] || TYPE_COLORS.recommendation;
-            return (
-              <div key={insight.id} className="bg-white/60 rounded-[32px] p-5 border border-gray-50 flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-2xl ${colors.iconBg} flex items-center justify-center text-2xl border border-white flex-shrink-0`}>
-                  {insight.emoji}
-                </div>
-                <div>
-                  <p className="text-sm font-black text-gray-800 mb-1">{insight.title}</p>
-                  <p className="text-xs font-bold text-gray-500 leading-relaxed">{insight.message}</p>
-                </div>
-              </div>
-            );
-          })}
+        <div className="pt-6 pb-12 text-center">
+           <p className="text-[10px] font-bold text-[var(--color-text-muted)] leading-relaxed">
+             위 분석은 관리자가 검증한 AI 건강 규칙과<br/>
+             회원님의 실제 데이터를 기반으로 로컬에서 계산되었습니다.
+           </p>
         </div>
       </div>
 

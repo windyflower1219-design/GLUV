@@ -57,10 +57,13 @@ export default function ProfilePage() {
     }
   };
 
+  const ADMIN_UID = 'WGlSyhUc5BQ0hiUfiZFq3sC1Cur1';
+  const isAdmin = user?.uid === ADMIN_UID;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--color-bg-primary)] flex items-center justify-center">
-        <Loader2 className="animate-spin text-rose-400" size={32} />
+        <Loader2 className="animate-spin text-[var(--color-accent)]" size={32} />
       </div>
     );
   }
@@ -70,14 +73,16 @@ export default function ProfilePage() {
       <PageHeader title="내 정보 설정" />
 
       <div className="px-5 space-y-6 pt-4 pb-24">
-        {/* 사용자 정보 카드 */}
-        <div className="bg-white rounded-[40px] p-6 shadow-sm border border-gray-50 flex items-center gap-4">
-          <div className="w-16 h-16 rounded-3xl bg-rose-50 flex items-center justify-center text-3xl shadow-inner border border-white">
-            👤
-          </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-black text-gray-800">{user?.displayName || '사용자'}님</h2>
-            <p className="text-xs font-bold text-gray-400 mt-0.5">{user?.email}</p>
+        <div className="bg-white rounded-[40px] p-6 shadow-sm border border-[var(--color-border)]">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-3xl bg-[var(--color-primary-soft)] flex items-center justify-center text-3xl shadow-inner border border-white">
+              👤
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-black text-[var(--color-text-primary)]">{user?.displayName || '사용자'}님</h2>
+              <p className="text-xs font-bold text-[var(--color-text-secondary)] mt-0.5">{user?.email}</p>
+              {isAdmin && <span className="inline-block mt-2 px-2 py-0.5 bg-[var(--color-primary-soft)] text-[var(--color-accent)] text-[9px] font-black rounded-md">SYSTEM ADMIN</span>}
+            </div>
           </div>
         </div>
 
@@ -92,8 +97,8 @@ export default function ProfilePage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-black text-gray-700 flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center">
-                    <Flame size={16} className="text-orange-500" />
+                  <div className="w-8 h-8 rounded-xl bg-[var(--color-bg-primary)] flex items-center justify-center">
+                    <Flame size={16} className="text-[var(--color-accent)]" />
                   </div>
                   하루 목표 칼로리
                 </label>
@@ -115,8 +120,8 @@ export default function ProfilePage() {
             {/* 목표 혈당 범위 */}
             <div className="space-y-6">
               <label className="text-sm font-black text-gray-700 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center">
-                  <Heart size={16} className="text-indigo-500" />
+                <div className="w-8 h-8 rounded-xl bg-[var(--color-bg-primary)] flex items-center justify-center">
+                  <Heart size={16} className="text-[var(--color-accent)]" />
                 </div>
                 안전 혈당 목표 범위
               </label>
@@ -167,7 +172,7 @@ export default function ProfilePage() {
           <button
             onClick={handleUpdate}
             disabled={saving}
-            className="w-full bg-gray-800 text-white py-5 rounded-[32px] font-black text-sm shadow-xl shadow-indigo-100 active:scale-95 transition-all flex items-center justify-center gap-2"
+            className="w-full bg-[var(--color-accent)] text-white py-5 rounded-[32px] font-black text-sm shadow-xl shadow-[var(--color-accent)]/20 active:scale-95 transition-all flex items-center justify-center gap-2"
           >
             {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
             목표 설정 저장하기
@@ -176,9 +181,19 @@ export default function ProfilePage() {
 
         {/* 기타 액션: 불필요한 카드 제거 및 심플한 버튼 스타일 */}
         <div className="flex flex-col items-center gap-6 pt-4">
+          {/* 관리자 모드 버튼 */}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="w-full bg-white border-2 border-[var(--color-border)] text-[var(--color-text-primary)] py-4 rounded-[32px] font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              👑 관리자 모드 진입
+            </Link>
+          )}
+
           <button
             onClick={handleLogout}
-            className="text-xs font-black text-rose-400 hover:text-rose-600 transition-colors px-6 py-2 rounded-xl bg-rose-50/50"
+            className="text-xs font-black text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors px-6 py-2 rounded-xl bg-[var(--color-bg-primary)]"
           >
             로그아웃
           </button>

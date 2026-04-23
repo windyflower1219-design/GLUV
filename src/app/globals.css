@@ -6,35 +6,35 @@
    CSS Variables (Design Tokens)
    ============================== */
 :root {
-  --color-bg-primary: #F8FAFC;
-  --color-bg-secondary: #F1F5F9;
+  --color-bg-primary: #FFF9F9;   /* 아주 연한 핑크 베이스 크림색 */
+  --color-bg-secondary: #FFF0F3;
   --color-bg-card: #FFFFFF;
   
-  /* Brand Colors */
-  --color-primary: #6366F1;     /* Indigo 500 */
-  --color-primary-soft: #EEF2FF;
-  --color-accent: #F43F5E;      /* Rose 500 */
-  --color-accent-soft: #FFF1F2;
+  /* Brand Colors (Cute Pink Pastel) */
+  --color-primary: #FFB7C5;     /* Cherry Blossom Pink */
+  --color-primary-soft: #FFE4E9;
+  --color-accent: #FF85A1;      /* Strawberry Pink */
+  --color-accent-soft: #FFFBFC;
   
-  /* Semantic Colors */
-  --color-success: #10B981;     /* Emerald 500 */
-  --color-warning: #F59E0B;     /* Amber 500 */
-  --color-danger: #EF4444;      /* Red 500 */
+  /* Semantic Colors (Pastel) */
+  --color-success: #B8E4C9;     /* Pastel Mint */
+  --color-warning: #FFEBAD;     /* Pastel Yellow */
+  --color-danger: #FFB3B3;      /* Pastel Red */
   
-  /* Text Colors */
-  --color-text-primary: #1E293B;   /* Slate 800 */
-  --color-text-secondary: #64748B; /* Slate 500 */
-  --color-text-muted: #94A3B8;     /* Slate 400 */
+  /* Text Colors (Soft) */
+  --color-text-primary: #5F4B4B;   /* Warm Brownish Grey (글자도 부드럽게) */
+  --color-text-secondary: #8B7676;
+  --color-text-muted: #B7A5A5;
   
   /* Utility */
-  --color-border: #E2E8F0;      /* Slate 200 */
+  --color-border: #FCE2E6;
   --radius-lg: 1.25rem;
-  --radius-xl: 2rem;
-  --radius-2xl: 3rem;
+  --radius-xl: 2.25rem;
+  --radius-2xl: 3.5rem;
   
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 2px 4px 0 rgb(255 183 197 / 0.1);
+  --shadow-md: 0 4px 12px -2px rgb(255 183 197 / 0.2);
+  --shadow-lg: 0 12px 24px -4px rgb(255 183 197 / 0.25);
 }
 
 /* ==============================
@@ -241,7 +241,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 25px -5px rgba(255, 183, 197, 0.5);
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 

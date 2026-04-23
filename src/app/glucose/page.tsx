@@ -157,7 +157,7 @@ export default function GlucosePage() {
               key={p}
               onClick={() => setPeriod(p)}
               className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${
-                period === p ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'
+                period === p ? 'bg-[var(--color-accent)] text-white shadow-md' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'
               }`}
             >
               {p === 'day' ? '일간' : p === 'week' ? '주간' : '월간'}
@@ -175,7 +175,7 @@ export default function GlucosePage() {
                   key={d.toISOString()}
                   onClick={() => setSelectedDate(d)}
                   className={`flex flex-col items-center px-4 py-2 rounded-2xl min-w-[60px] transition-all border ${
-                    isSelected ? 'bg-rose-500 text-white border-rose-500 shadow-lg' : 'bg-white text-gray-400 border-gray-100'
+                    isSelected ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-lg' : 'bg-white text-[var(--color-text-muted)] border-[var(--color-border)]'
                   }`}
                 >
                   <span className="text-[9px] font-bold opacity-70 mb-1">{d.toLocaleDateString('ko-KR', { weekday: 'short' })}</span>
@@ -191,7 +191,7 @@ export default function GlucosePage() {
           <div className="bg-white p-5 rounded-[32px] border border-gray-50 shadow-sm">
             <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-2">평균 혈당</p>
             <div className="flex items-baseline gap-1">
-               <span className="text-2xl font-black text-gray-800">{displayAverage}</span>
+               <span className="text-2xl font-black text-[var(--color-text-primary)]">{displayAverage}</span>
                <span className="text-[10px] font-bold text-gray-400">mg/dL</span>
             </div>
           </div>
@@ -208,7 +208,7 @@ export default function GlucosePage() {
         <div className="bg-white p-6 rounded-[40px] border border-gray-50 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-sm font-black text-gray-800">혈당 추이</h3>
-            <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-1 rounded-lg">
+            <span className="text-[10px] font-black text-[var(--color-accent)] bg-[var(--color-primary-soft)] px-2 py-1 rounded-lg">
               {period === 'day' ? '시간별' : '일별 평균'}
             </span>
           </div>
@@ -217,15 +217,15 @@ export default function GlucosePage() {
               <AreaChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -30 }}>
                 <defs>
                   <linearGradient id="gGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#F43F5E" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="6 6" stroke="#f8fafc" vertical={false} />
                 <XAxis dataKey="time" tick={{ fill: '#cbd5e1', fontSize: 9, fontWeight: 'bold' }} axisLine={false} tickLine={false} dy={10} />
                 <YAxis domain={[40, 240]} tick={{ fill: '#cbd5e1', fontSize: 9, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
                 <Tooltip content={<GlucoseTooltip />} />
-                <Area type="monotone" dataKey="glucose" stroke="#F43F5E" strokeWidth={3} fill="url(#gGrad)" dot={{ r: 4, fill: 'white', stroke: '#F43F5E', strokeWidth: 2 }} />
+                <Area type="monotone" dataKey="glucose" stroke="var(--color-accent)" strokeWidth={4} fill="url(#gGrad)" dot={{ r: 5, fill: 'white', stroke: 'var(--color-accent)', strokeWidth: 3 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

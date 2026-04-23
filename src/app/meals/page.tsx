@@ -21,10 +21,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useHealthData } from '@/context/HealthDataContext';
 
 const MEAL_TYPE_LABELS: Record<MealType, { label: string; emoji: string; color: string; bg: string }> = {
-  breakfast: { label: '아침', emoji: '🌅', color: 'text-orange-500', bg: 'bg-orange-50' },
-  lunch: { label: '점심', emoji: '☀️', color: 'text-yellow-600', bg: 'bg-yellow-50' },
-  dinner: { label: '저녁', emoji: '🌙', color: 'text-indigo-500', bg: 'bg-indigo-50' },
-  snack: { label: '간식', emoji: '🍎', color: 'text-rose-500', bg: 'bg-rose-50' },
+  breakfast: { label: '아침', emoji: '🌅', color: 'text-[var(--color-accent)]', bg: 'bg-[#FFF5F6]' },
+  lunch: { label: '점심', emoji: '☀️', color: 'text-[var(--color-accent)]', bg: 'bg-[#FFF9F0]' },
+  dinner: { label: '저녁', emoji: '🌙', color: 'text-[var(--color-accent)]', bg: 'bg-[#F0F4FF]' },
+  snack: { label: '간식', emoji: '🍎', color: 'text-[var(--color-accent)]', bg: 'bg-[#FFF0F3]' },
 };
 
 function getMealType(): MealType {
@@ -215,7 +215,7 @@ export default function MealsPage() {
                 onClick={() => setSelectedDate(d)}
                 className={`flex flex-col items-center px-3 py-2 rounded-2xl min-w-[56px] cursor-pointer transition-all ${
                   isSelected 
-                    ? 'bg-rose-500 text-white shadow-lg scale-105' 
+                    ? 'bg-[var(--color-accent)] text-white shadow-lg scale-105' 
                     : 'bg-white text-gray-500 border border-gray-100'
                 }`}
               >
@@ -235,16 +235,16 @@ export default function MealsPage() {
       <div className="px-4 space-y-5 pt-4">
         <div className="glass-card p-5 border-none shadow-sm relative overflow-hidden bg-white/50">
           <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--color-accent-pink)] opacity-5 rounded-full -mr-8 -mt-8" />
-          <p className="text-xs font-black text-rose-500 uppercase tracking-widest flex items-center gap-2 mb-4">
+          <p className="text-xs font-black text-[var(--color-accent)] uppercase tracking-widest flex items-center gap-2 mb-4">
             <Flame size={12} /> Today Calories
           </p>
           <div className="flex items-baseline gap-1 mt-1">
-            <span className="text-2xl font-black text-gray-800">{todayCalories}</span>
+            <span className="text-2xl font-black text-[var(--color-text-primary)]">{todayCalories}</span>
             <span className="text-xs font-bold text-gray-400">/ {targetKcal} kcal</span>
           </div>
           <div className="mt-5 h-3 rounded-full bg-gray-100 overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-rose-500 to-amber-400 transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] transition-all duration-500"
               style={{ width: `${kcalPercentage}%` }}
             />
           </div>

@@ -17,7 +17,7 @@ export default function BottomNavigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="bottom-nav bg-[#FFFCF7]/95 border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+    <nav className="bottom-nav bg-white/95 border-t border-[var(--color-border)] shadow-[0_-4px_20px_rgba(255,183,197,0.1)]">
       <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
           const isActive = pathname === href || pathname.startsWith(href);
@@ -29,24 +29,24 @@ export default function BottomNavigation() {
             >
               <div className={`p-2 rounded-2xl transition-all duration-300 ${
                 isActive
-                  ? 'bg-[var(--color-accent-pink)]/10 scale-110'
-                  : 'group-active:bg-gray-100'
+                  ? 'bg-[var(--color-primary-soft)] scale-110'
+                  : 'group-active:bg-[var(--color-bg-secondary)]'
               }`}>
                 <Icon
                   size={24}
                   strokeWidth={isActive ? 2.5 : 2}
                   className={`transition-colors duration-300 ${
-                    isActive ? 'text-[var(--color-accent-pink)]' : 'text-gray-300'
+                    isActive ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'
                   }`}
                 />
               </div>
               <span className={`text-[10px] font-bold transition-colors duration-300 ${
-                isActive ? 'text-[var(--color-accent-pink)]' : 'text-gray-300'
+                isActive ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'
               }`}>
                 {label}
               </span>
               {isActive && (
-                <div className="absolute -top-1 w-1 h-1 rounded-full bg-[var(--color-accent-pink)] shadow-[0_0_8px_var(--color-accent-pink)]" />
+                <div className="absolute -top-1 w-1 h-1 rounded-full bg-[var(--color-accent)] shadow-[0_0_8px_var(--color-accent)]" />
               )}
             </Link>
           );

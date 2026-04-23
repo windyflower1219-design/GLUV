@@ -139,16 +139,16 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-sheet bg-[#FFFCF7] border-none shadow-2xl rounded-[40px]">
+      <div className="modal-sheet bg-[var(--color-bg-primary)] border-none shadow-2xl rounded-[40px]">
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-2xl shadow-lg shadow-indigo-100 border border-white">
+            <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary)] flex items-center justify-center text-2xl shadow-lg shadow-[var(--color-primary)]/20 border border-white">
               <Sparkles size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-gray-800">GLUV 통합 비서</h2>
-              <p className="text-xs font-bold text-gray-400 mt-0.5">식단과 혈당을 말씀만 해주세요 ✨</p>
+              <h2 className="text-xl font-black text-[var(--color-text-primary)]">GLUV 통합 비서</h2>
+              <p className="text-xs font-bold text-[var(--color-text-secondary)] mt-0.5">식단과 혈당을 말씀만 해주세요 ✨</p>
             </div>
           </div>
           <button
@@ -176,8 +176,8 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
                   disabled={!isSupported || isParsing}
                   className={`relative w-24 h-24 rounded-[32px] flex items-center justify-center transition-all duration-500 shadow-xl ${
                     isListening
-                      ? 'bg-indigo-600 shadow-indigo-200 rotate-12 scale-110'
-                      : 'bg-white border-4 border-indigo-50 hover:border-indigo-100'
+                      ? 'bg-[var(--color-accent)] shadow-[var(--color-accent)]/20 rotate-12 scale-110'
+                      : 'bg-white border-4 border-[var(--color-primary-soft)] hover:border-[var(--color-primary)]'
                   } disabled:opacity-40 active:scale-95`}
                   aria-label={isListening ? '듣고 있어요!' : '말씀해주세요'}
                 >
@@ -204,12 +204,12 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
                 <div className="bg-white/60 backdrop-blur-sm px-6 py-3 rounded-2xl border border-rose-50 shadow-sm min-w-[200px] text-center">
                   {isListening && (
                     <div className="space-y-4">
-                      <p className="text-indigo-600 font-black text-sm leading-relaxed whitespace-pre-wrap">
+                      <p className="text-[var(--color-accent)] font-black text-sm leading-relaxed whitespace-pre-wrap">
                         {interimTranscript || '귀 기울여 듣고 있어요... ✨'}
                       </p>
                       <button
                         onClick={stopListening}
-                        className="bg-indigo-100 text-indigo-600 px-6 py-2 rounded-xl font-black text-xs animate-bounce"
+                        className="bg-[var(--color-primary-soft)] text-[var(--color-accent)] px-6 py-2 rounded-xl font-black text-xs animate-bounce"
                       >
                         말씀 끝났으면 눌러주세요 ✅
                       </button>
@@ -328,8 +328,8 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
             {editedGlucose !== undefined && (
               <div className="mb-6">
                 <p className="text-xs font-black text-gray-500 mb-3 px-1">인식된 혈당 정보</p>
-                <div className="bg-white border-2 border-indigo-50 rounded-[32px] p-5 shadow-sm flex items-center gap-5">
-                   <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-2xl shadow-inner border border-white">
+                <div className="bg-white border-2 border-[var(--color-primary-soft)] rounded-[32px] p-5 shadow-sm flex items-center gap-5">
+                   <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary-soft)] flex items-center justify-center text-2xl shadow-inner border border-white">
                     🩸
                   </div>
                   <div className="flex-1">
@@ -518,7 +518,7 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
               />
             </div>
 
-            <div className="flex gap-3 sticky bottom-0 bg-[#FFFCF7]/95 backdrop-blur py-2">
+            <div className="flex gap-3 sticky bottom-0 bg-[var(--color-bg-primary)]/95 backdrop-blur py-2">
               <button
                 onClick={() => {
                   setParseResult(null);
@@ -566,7 +566,7 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
                   onConfirm(parseResult.parsedFoods, parseResult.rawText, glucoseData, new Date(selectedTime));
                 }}
                 disabled={(parseResult.parsedFoods.length === 0 && editedGlucose === undefined) || isSubmitting}
-                className="flex-1 bg-indigo-600 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl shadow-indigo-100 active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="flex-1 bg-[var(--color-accent)] text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl shadow-[var(--color-accent)]/20 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">저장 중... <Loader2 size={18} className="animate-spin" /></span>
