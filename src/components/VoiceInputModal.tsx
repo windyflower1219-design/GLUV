@@ -176,8 +176,8 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
                   disabled={!isSupported || isParsing}
                   className={`relative w-24 h-24 rounded-[32px] flex items-center justify-center transition-all duration-500 shadow-xl ${
                     isListening
-                      ? 'bg-rose-500 shadow-rose-200 rotate-12 scale-110'
-                      : 'bg-white border-4 border-rose-50 hover:border-rose-100'
+                      ? 'bg-indigo-600 shadow-indigo-200 rotate-12 scale-110'
+                      : 'bg-white border-4 border-indigo-50 hover:border-indigo-100'
                   } disabled:opacity-40 active:scale-95`}
                   aria-label={isListening ? '듣고 있어요!' : '말씀해주세요'}
                 >
@@ -204,12 +204,12 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
                 <div className="bg-white/60 backdrop-blur-sm px-6 py-3 rounded-2xl border border-rose-50 shadow-sm min-w-[200px] text-center">
                   {isListening && (
                     <div className="space-y-4">
-                      <p className="text-rose-600 font-black text-sm leading-relaxed whitespace-pre-wrap">
+                      <p className="text-indigo-600 font-black text-sm leading-relaxed whitespace-pre-wrap">
                         {interimTranscript || '귀 기울여 듣고 있어요... ✨'}
                       </p>
                       <button
                         onClick={stopListening}
-                        className="bg-rose-100 text-rose-600 px-6 py-2 rounded-xl font-black text-xs animate-bounce"
+                        className="bg-indigo-100 text-indigo-600 px-6 py-2 rounded-xl font-black text-xs animate-bounce"
                       >
                         말씀 끝났으면 눌러주세요 ✅
                       </button>
@@ -566,7 +566,7 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
                   onConfirm(parseResult.parsedFoods, parseResult.rawText, glucoseData, new Date(selectedTime));
                 }}
                 disabled={(parseResult.parsedFoods.length === 0 && editedGlucose === undefined) || isSubmitting}
-                className="flex-1 bg-gray-800 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl shadow-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="flex-1 bg-indigo-600 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl shadow-indigo-100 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">저장 중... <Loader2 size={18} className="animate-spin" /></span>

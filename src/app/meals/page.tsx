@@ -215,8 +215,8 @@ export default function MealsPage() {
                 onClick={() => setSelectedDate(d)}
                 className={`flex flex-col items-center px-3 py-2 rounded-2xl min-w-[56px] cursor-pointer transition-all ${
                   isSelected 
-                    ? 'bg-[var(--color-accent-pink)] text-white shadow-lg scale-105' 
-                    : 'bg-white text-[var(--color-text-secondary)] border border-[var(--color-border)]'
+                    ? 'bg-rose-500 text-white shadow-lg scale-105' 
+                    : 'bg-white text-gray-500 border border-gray-100'
                 }`}
               >
                 <span className="text-[10px] font-bold opacity-80">
@@ -225,7 +225,7 @@ export default function MealsPage() {
                 <span className="text-lg font-extrabold">
                   {d.getDate()}
                 </span>
-                {isToday && !isSelected && <div className="w-1 h-1 rounded-full bg-[var(--color-accent-pink)] mt-0.5" />}
+                {isToday && !isSelected && <div className="w-1 h-1 rounded-full bg-rose-500 mt-0.5" />}
               </div>
             );
           })}
@@ -244,7 +244,7 @@ export default function MealsPage() {
           </div>
           <div className="mt-5 h-3 rounded-full bg-gray-100 overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent-pink)] to-[var(--color-warning)] transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-rose-500 to-amber-400 transition-all duration-500"
               style={{ width: `${kcalPercentage}%` }}
             />
           </div>
@@ -614,7 +614,7 @@ export default function MealsPage() {
 
             <button 
               onClick={() => setShowGuide(false)}
-              className="w-full py-4 bg-gray-800 text-white rounded-3xl font-black text-sm shadow-xl shadow-gray-200"
+              className="w-full py-4 bg-indigo-600 text-white rounded-3xl font-black text-sm shadow-xl shadow-indigo-100"
             >
               확인했습니다
             </button>

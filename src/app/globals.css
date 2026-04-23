@@ -6,24 +6,35 @@
    CSS Variables (Design Tokens)
    ============================== */
 :root {
-  --color-bg-primary: #FFF9F2;
-  --color-bg-secondary: #FFF3E6;
+  --color-bg-primary: #F8FAFC;
+  --color-bg-secondary: #F1F5F9;
   --color-bg-card: #FFFFFF;
-  --color-accent-blue: #70A1FF;
-  --color-accent-purple: #A29BFE;
-  --color-accent-pink: #FF9FAD;
-  --color-accent-teal: #1ABC9C;
-  --color-success: #2ECC71;
-  --color-warning: #F1C40F;
-  --color-danger: #E74C3C;
-  --color-text-primary: #2D3436;
-  --color-text-secondary: #636E72;
-  --color-border: rgba(0,0,0,0.08);
+  
+  /* Brand Colors */
+  --color-primary: #6366F1;     /* Indigo 500 */
+  --color-primary-soft: #EEF2FF;
+  --color-accent: #F43F5E;      /* Rose 500 */
+  --color-accent-soft: #FFF1F2;
+  
+  /* Semantic Colors */
+  --color-success: #10B981;     /* Emerald 500 */
+  --color-warning: #F59E0B;     /* Amber 500 */
+  --color-danger: #EF4444;      /* Red 500 */
+  
+  /* Text Colors */
+  --color-text-primary: #1E293B;   /* Slate 800 */
+  --color-text-secondary: #64748B; /* Slate 500 */
+  --color-text-muted: #94A3B8;     /* Slate 400 */
+  
+  /* Utility */
+  --color-border: #E2E8F0;      /* Slate 200 */
   --radius-lg: 1.25rem;
-  --radius-xl: 1.75rem;
-  --shadow-glow-blue: 0 10px 30px rgba(112, 161, 255, 0.2);
-  --shadow-glow-green: 0 10px 30px rgba(46, 204, 113, 0.2);
-  --shadow-glow-red: 0 10px 30px rgba(231, 76, 60, 0.2);
+  --radius-xl: 2rem;
+  --radius-2xl: 3rem;
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 /* ==============================
@@ -224,13 +235,13 @@ body {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 20px rgba(59,130,246,0.5), 0 0 0 0 rgba(59,130,246,0.4);
+  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
