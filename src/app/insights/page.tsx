@@ -39,7 +39,7 @@ export default function InsightsPage() {
   const { user } = useAuth();
   const userId = user?.uid || 'guest';
   const { averageGlucose } = useGlucoseData();
-  const { meals: recentMealsData } = useHealthData();
+  const { meals: recentMealsData, glucoseReadings } = useHealthData();
   const [insights, setInsights] = useState<ActionableInsight[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -126,7 +126,46 @@ export default function InsightsPage() {
   }, [recentMealsData, glucoseReadings, averageGlucose]);
 
   const fetchAIInsights = useCallback(async () => {
-    // ... 기존 AI 로직 (규칙 업데이트 등으로 활용 가능)
+    setIsGenerating(true);
+    try {
+      const res = await fetch('/api/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          averageGlucose,
+          recentMeals: recentMealsData.map(m => m.parsedFoods.map((f: any) => f.name).join(', ')),
+          isDemo: userId === 'guest'
+        }),
+      });
+      if (!res.ok) throw new Error('API Error');
+      const data = await res.json();
+      
+      const mapped = (data.insights || []).map((ins: any) => ({
+        ...ins,
+        createdAt: new Date(),
+        isRead: false
+      }));
+      setInsights(mapped);
+      if (mapped.length > 0) setExpandedId(mapped[0].id);
+    } catch (err) {
+      console.error(err);
+      const fallback: ActionableInsight[] = [
+        {
+          id: 'fallback_1',
+          type: 'recommendation',
+          title: '💧 물 충분히 마시기',
+          message: '혈당 관리에 수분 섭취는 필수입니다. 하루 1.5L~2L 정도 충분히 마셔보세요!',
+          emoji: '💧',
+          createdAt: new Date(),
+          isRead: false,
+        },
+      ];
+      setInsights(fallback);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [userId, averageGlucose, recentMealsData]);
 
   // 처음 들어왔을 때 인사이트가 비어있으면 생성
   useEffect(() => {
