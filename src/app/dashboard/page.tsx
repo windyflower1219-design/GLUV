@@ -83,7 +83,6 @@ export default function DashboardPage() {
 
   const greeting = isMounted ? getGreeting() : { text: '안녕하세요', icon: <Sun size={20} className="text-amber-400" /> };
   const totalCalories = todayMeals.reduce((s, m) => s + m.totalCalories, 0);
-  const totalCarbs = todayMeals.reduce((s, m) => s + m.totalCarbs, 0);
 
   if (!isMounted) return <div className="min-h-screen bg-[var(--color-bg-primary)] page-content"></div>;
 
@@ -117,7 +116,7 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* 현재 혈당 게이지 카드 (빨간 박스 영역 개편) */}
+        {/* 현재 혈당 게이지 카드 */}
         <div className="bg-white rounded-[40px] p-8 shadow-sm border border-gray-50 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--color-primary-soft)] rounded-full -mr-24 -mt-24 opacity-30 blur-3xl" />
           <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] text-center mb-8">
@@ -126,7 +125,6 @@ export default function DashboardPage() {
           
           <GlucoseGauge value={stats.avg} loading={loading} />
           
-          {/* 최대/최소 수치 표시 */}
           <div className="mt-8 flex items-center justify-center gap-12">
             <div className="text-center">
               <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase mb-1">MAX</p>
@@ -140,7 +138,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 오늘 통계 및 추이 그래프 (파란 박스 영역 개편) */}
+        {/* 오늘 통계 및 추이 그래프 */}
         <div className="bg-white rounded-[40px] p-6 shadow-sm border border-gray-50">
           <div className="flex items-center justify-between mb-8 px-1">
             <h2 className="font-black text-[var(--color-text-primary)] text-sm flex items-center gap-2">
@@ -179,7 +177,6 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
 
-          {/* 주요 지표 퀵 뷰 */}
           <div className="grid grid-cols-2 gap-3 pt-2">
             <div className="bg-[var(--color-bg-primary)] p-4 rounded-3xl border border-[var(--color-border)]">
               <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase mb-1">목표 범위 내</p>
@@ -190,7 +187,9 @@ export default function DashboardPage() {
               <p className="text-lg font-black text-[var(--color-text-primary)]">{totalCalories} <span className="text-[10px]">kcal</span></p>
             </div>
           </div>
-        {/* 오늘 식사 기록 요약 (혈당 다음에 위치) */}
+        </div>
+
+        {/* 오늘 식사 기록 요약 */}
         <div className="pb-2">
           <div className="flex items-center justify-between mb-4 px-1">
             <h2 className="font-black text-[var(--color-text-primary)] text-sm flex items-center gap-2">
@@ -252,8 +251,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </Link>
-
-
 
         {/* 푸터 */}
         <div className="pt-8 pb-12 text-center">
