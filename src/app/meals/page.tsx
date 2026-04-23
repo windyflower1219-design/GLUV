@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Plus, Trash2, ChevronDown,
-  MicIcon, Loader2, Pencil, Check, X
+  MicIcon, Loader2, Pencil, Check, X, Sparkles
 } from '@/components/common/Icons';
 import PageHeader from '@/components/common/PageHeader';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
