@@ -10,10 +10,11 @@ interface StatCardProps {
   bg: string;
   variant?: 'detail' | 'center';
   onClick?: () => void;
+  trend?: string;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ 
-  label, value, unit, icon, color, bg, variant = 'detail', onClick 
+  label, value, unit, icon, color, bg, variant = 'detail', onClick, trend 
 }) => {
   if (variant === 'center') {
     return (
@@ -45,9 +46,14 @@ const StatCard: React.FC<StatCardProps> = ({
       </div>
       <div className="space-y-1">
         <p className={`text-2xl font-black ${color}`}>{value}</p>
-        <div className="flex items-baseline gap-1">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
-          <span className="text-[9px] font-medium text-gray-300">{unit}</span>
+        <div className="flex flex-col">
+          <div className="flex items-baseline gap-1">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+            <span className="text-[9px] font-medium text-gray-300">{unit}</span>
+          </div>
+          {trend && (
+            <p className="text-[9px] font-black text-emerald-500 mt-0.5 leading-none">{trend}</p>
+          )}
         </div>
       </div>
     </div>
