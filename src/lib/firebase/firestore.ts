@@ -113,15 +113,24 @@ export const saveMeal = async (meal: Omit<Meal, 'id'>) => {
   }
 };
 
-export const getMeals = async (userId: string, date: Date) => {
-  const cacheK = `meals|${userId}|${dayKey(date)}`;
+export const getMeals = async (userId: string, date?: Date) => {
+  const cacheK = `meals|${userId}|${date ? dayKey(date) : 'recent'}`;
   const cached = getCache<Meal[]>(cacheK);
   if (cached) return cached;
 
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+  const startOfDay = date ? new Date(date) : new Date();
+  if (date) {
+    startOfDay.setHours(0, 0, 0, 0);
+  } else {
+    startOfDay.setDate(startOfDay.getDate() - 30); // 기본 최근 30일
+  }
+  
+  const endOfDay = date ? new Date(date) : new Date();
+  if (date) {
+    endOfDay.setHours(23, 59, 59, 999);
+  } else {
+    endOfDay.setHours(23, 59, 59, 999);
+  }
 
   let fbMeals: Meal[] = [];
   try {
