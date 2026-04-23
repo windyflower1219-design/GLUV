@@ -18,8 +18,8 @@ Next.js App Router의 라우트 컨벤션을 따릅니다. 전체 페이지는 `
 *   `/login`: 이메일/비밀번호 기반 회원가입 및 로그인 페이지
 *   `/dashboard`: 홈 대시보드 화면. 전체 요약 정보 표시
 *   `/glucose`: 혈당 기록 및 트렌드 확인 (수동 시간 입력 지원)
-*   `/meals`: 식사(식단) 기록 페이지
-*   `/insights`: Gemma 4 AI 분석 기반 실시간 생성 맞춤 조언 페이지 (`/api/insights` 연동)
+*   `/meals`: 식사(식단) 기록 페이지. 식사 카드 확장 시 **'혈당 영향 패널'**을 통해 ΔBG, 피크, 과거 히스토리 통계를 시각화합니다.
+*   `/insights`: Gemini 3 AI 분석 기반 실시간 생성 맞춤 조언 페이지 (`/api/insights` 연동)
 *   `layout.tsx`: 애플리케이션의 뼈대(Root Layout). PWA 모바일 대응 화면 레이아웃 (`AppLayout`) 및 상태 관리를 위한 `<AuthProvider>`, `<VoiceInputProvider>`를 주입합니다.
 
 ### 3.2. Components (`src/components/`)
@@ -32,7 +32,7 @@ Next.js App Router의 라우트 컨벤션을 따릅니다. 전체 페이지는 `
     *   `AppLayout.tsx`: 모바일 디바이스 크기에 맞춘 컨테이너 및 배경 설정. **더불어 로그인되지 않은 사용자 접근 시 `/login`으로 강제 리다이렉트하는 라우트 가드 수행.**
     *   `BottomNavigation.tsx`: 하단 탭 내비게이션 바
 *   **기능별 주요 컴포넌트**:
-    *   `VoiceInputModal.tsx`: 마이크 권한을 통해 사용자의 음성을 녹음하고 텍스트로 보여주는 통합 음성 비서 모달. (타임스탬프 개별 수정 기능 지원)
+    *   `VoiceInputModal.tsx`: 사용자의 음성을 분석하여 식단과 혈당을 추출하는 모달. 최근 업데이트를 통해 **단백질, 지방** 수치도 함께 확인하고 수정할 수 있습니다.
 
 ### 3.3. State Management & Hooks (`src/lib/hooks/` & `src/context/`)
 *   `AuthContext.tsx`: Firebase Auth 상태 유지 관리.
@@ -42,8 +42,10 @@ Next.js App Router의 라우트 컨벤션을 따릅니다. 전체 페이지는 `
 
 ## 4. UI/UX 디자인 원칙
 1.  **모바일 최적화**: SafeArea 영역 대응(`safe-padding` 유틸리티) 및 모바일 네비게이션 제스처 등을 고려.
-2.  **직관적 시각화**: 혈당 및 식단 데이터는 게이지(`GlucoseGauge`), 차트 형식을 통해 시각적으로 쉽게 인지되도록 구현.
-3.  **심리스한 입력 경험**: `VoiceInputModal`을 통해 타이핑 입력 없이 음성만으로 식단과 혈당을 한 번에 기록할 수 있는 혁신적 UX 제공.
+2.  **직관적 시각화**: 
+    *   **혈당 영향 패널**: ΔBG(혈당 변화량)를 큰 글씨로 강조하고, 피크 및 도달 시간을 정밀하게 표시하여 식사 반응을 한눈에 파악.
+    *   **히스토리 칩**: 과거 데이터와 대조하여 "이 음식은 보통 +48 올라요"와 같은 개인화된 통찰 제공.
+3.  **심리스한 입력 경험**: `VoiceInputModal`을 통해 타이핑 입력 없이 음성만으로 탄/단/지 영양 성분과 혈당을 한 번에 기록.
 
 ## 5. 실행 및 개발 스크립트
 *   `npm run dev`: 로컬 개발 서버 실행
