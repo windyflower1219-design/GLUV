@@ -165,7 +165,6 @@ async function callModel(apiKey: string, modelName: string, prompt: string): Pro
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
-      responseMimeType: 'application/json',
       temperature: 0.2,
     },
   });
