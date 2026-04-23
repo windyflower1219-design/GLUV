@@ -163,37 +163,30 @@ export default function ProfilePage() {
         )}
 
         {/* 저장 버튼 */}
-        <button
-          onClick={handleUpdate}
-          disabled={saving}
-          className="w-full bg-gray-800 text-white py-5 rounded-[32px] font-black text-sm shadow-xl shadow-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2"
-        >
-          {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-          목표 설정 저장하기
-        </button>
-
-        <div className="h-4" />
-
-        {/* 기타 액션 */}
-        <div className="bg-white rounded-[40px] overflow-hidden shadow-sm border border-gray-50">
+        <div className="pt-2">
           <button
-            onClick={handleLogout}
-            className="w-full px-6 py-5 flex items-center justify-between hover:bg-rose-50 transition-colors group"
+            onClick={handleUpdate}
+            disabled={saving}
+            className="w-full bg-gray-800 text-white py-5 rounded-[32px] font-black text-sm shadow-xl shadow-indigo-100 active:scale-95 transition-all flex items-center justify-center gap-2"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-50 flex items-center justify-center">
-                <LogOut size={18} className="text-rose-400" />
-              </div>
-              <span className="text-sm font-bold text-gray-700 group-hover:text-rose-500">로그아웃</span>
-            </div>
-            <ChevronRight size={18} className="text-gray-300" />
+            {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+            목표 설정 저장하기
           </button>
         </div>
 
-        {/* 하단 캡션 */}
-        <p className="text-center text-[10px] font-bold text-gray-300">
-          GLUV v1.2.0 · 건강한 변화의 시작 ✨
-        </p>
+        {/* 기타 액션: 불필요한 카드 제거 및 심플한 버튼 스타일 */}
+        <div className="flex flex-col items-center gap-6 pt-4">
+          <button
+            onClick={handleLogout}
+            className="text-xs font-black text-rose-400 hover:text-rose-600 transition-colors px-6 py-2 rounded-xl bg-rose-50/50"
+          >
+            로그아웃
+          </button>
+
+          <p className="text-[10px] font-bold text-gray-300">
+            GLUV v1.2.0 · 건강한 변화의 시작 ✨
+          </p>
+        </div>
       </div>
     </div>
   );
