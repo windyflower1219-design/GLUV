@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Plus, Trash2, ChevronDown,
-  MicIcon, Loader2, Pencil, Check, X, Sparkles, Flame
+  MicIcon, Loader2, Pencil, Check, X, Sparkles, Flame, HelpCircle, Activity
 } from '@/components/common/Icons';
 import PageHeader from '@/components/common/PageHeader';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
@@ -43,6 +43,7 @@ export default function MealsPage() {
   
   const { openVoiceInput } = useVoiceInputContext();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
   const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
   const [allRecentMeals, setAllRecentMeals] = useState<Meal[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -532,6 +533,69 @@ export default function MealsPage() {
           })}
         </div>
       </div>
+      {/* 지표 가이드 모달 */}
+      {showGuide && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowGuide(false)}
+        >
+          <div 
+            className="bg-white rounded-[40px] p-8 max-w-sm w-full shadow-2xl space-y-6 animate-scale-in"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-black text-gray-800 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500">
+                  <Sparkles size={18} />
+                </div>
+                지표 가이드
+              </h3>
+              <button onClick={() => setShowGuide(false)} className="p-2 bg-gray-50 rounded-full text-gray-400">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div className="space-y-1">
+                <p className="text-xs font-black text-emerald-500">ΔBG (혈당 스파이크)</p>
+                <p className="text-[11px] font-bold text-gray-500 leading-relaxed">
+                  식사 전 혈당 대비 얼마나 높게 올랐는지를 보여줍니다. 보통 <span className="text-rose-400">+30 mg/dL 미만</span>으로 유지하는 것이 혈관 건강에 좋습니다.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-black text-orange-500">피크 시간</p>
+                <p className="text-[11px] font-bold text-gray-500 leading-relaxed">
+                  음식물이 소화되어 혈당이 가장 높게 치솟는 시점입니다. 정제 탄수화물이나 액상과당이 많을수록 이 시간이 빨라지고 수치가 높아집니다.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-black text-indigo-500">식후 2시간 혈당</p>
+                <p className="text-[11px] font-bold text-gray-500 leading-relaxed">
+                  우리 몸의 인슐린이 혈당을 얼마나 효과적으로 다시 낮추는지 보여주는 대사 능력의 척도입니다. 당뇨 관리의 핵심 지표입니다.
+                </p>
+              </div>
+
+              <div className="bg-amber-50 p-4 rounded-3xl border border-amber-100 mt-2">
+                <p className="text-[10px] font-black text-amber-600 mb-1 flex items-center gap-1">
+                  💡 건강 관리 Tip
+                </p>
+                <p className="text-[10px] font-bold text-amber-700/80 leading-relaxed">
+                  혈당이 급격히 오를 때는 식사 순서를 <span className="underline decoration-amber-300">채소 → 단백질 → 탄수화물</span> 순으로 바꿔보세요! 상승폭이 훨씬 완만해집니다.
+                </p>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setShowGuide(false)}
+              className="w-full py-4 bg-gray-800 text-white rounded-3xl font-black text-sm shadow-xl shadow-gray-200"
+            >
+              확인했습니다
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
