@@ -51,7 +51,7 @@ export default function DashboardPage() {
     refreshData 
   } = useHealthData();
   
-  const [latestInsight, setLatestInsight] = useState('오늘도 건강 기록을 남겨보세요! 꾸준한 기록이 건강 관리의 첫 걸음이에요 💕');
+  const [latestInsight, setLatestInsight] = useState('AI가 분석한 맞춤형 건강 지식이 업데이트되었습니다. 지금 바로 새로운 인사이트를 확인해보세요! ✨');
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
 
   const { 
@@ -190,27 +190,8 @@ export default function DashboardPage() {
               <p className="text-lg font-black text-[var(--color-text-primary)]">{totalCalories} <span className="text-[10px]">kcal</span></p>
             </div>
           </div>
-        </div>
-
-        {/* AI 인사이트 배너 */}
-        <Link href="/insights">
-          <div className="relative overflow-hidden rounded-[32px] p-6 bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-primary)] shadow-lg shadow-[var(--color-primary)]/20">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0 animate-bounce-slow">
-                <SparklesIcon size={24} className="text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-black text-white/70 mb-1 uppercase tracking-widest">오늘의 따뜻한 조언</p>
-                <p className="text-sm font-bold text-white leading-relaxed">{latestInsight}</p>
-              </div>
-              <ChevronRight size={18} className="text-white/50 flex-shrink-0 mt-1" />
-            </div>
-          </div>
-        </Link>
-
-        {/* 오늘 식사 기록 요약 */}
-        <div className="pb-8">
+        {/* 오늘 식사 기록 요약 (혈당 다음에 위치) */}
+        <div className="pb-2">
           <div className="flex items-center justify-between mb-4 px-1">
             <h2 className="font-black text-[var(--color-text-primary)] text-sm flex items-center gap-2">
                <span className="w-1.5 h-4 bg-[var(--color-accent)] rounded-full mr-1" />
@@ -254,6 +235,25 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* AI 인사이트 배너 */}
+        <Link href="/insights">
+          <div className="relative overflow-hidden rounded-[32px] p-6 bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-primary)] shadow-lg shadow-[var(--color-primary)]/20">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0 animate-bounce-slow">
+                <SparklesIcon size={24} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-black text-white/70 mb-1 uppercase tracking-widest">오늘의 따뜻한 조언</p>
+                <p className="text-sm font-bold text-white leading-relaxed">{latestInsight}</p>
+              </div>
+              <ChevronRight size={18} className="text-white/50 flex-shrink-0 mt-1" />
+            </div>
+          </div>
+        </Link>
+
+
 
         {/* 푸터 */}
         <div className="pt-8 pb-12 text-center">

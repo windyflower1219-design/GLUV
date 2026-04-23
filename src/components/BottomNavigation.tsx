@@ -7,8 +7,8 @@ import { Home, Utensils, Activity, Lightbulb, Settings } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: '홈' },
-  { href: '/meals', icon: Utensils, label: '식단' },
   { href: '/glucose', icon: Activity, label: '혈당' },
+  { href: '/meals', icon: Utensils, label: '식단' },
   { href: '/insights', icon: Lightbulb, label: '인사이트' },
   { href: '/profile', icon: Settings, label: '설정' },
 ];
