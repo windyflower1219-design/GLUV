@@ -143,12 +143,12 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl shadow-sm border border-white">
-              🍱
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-2xl shadow-lg shadow-indigo-100 border border-white">
+              <Sparkles size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-gray-800">통합 음성 비서</h2>
-              <p className="text-xs font-bold text-gray-400 mt-0.5">식사와 혈당을 한 번에 기록해보세요</p>
+              <h2 className="text-xl font-black text-gray-800">GLUV 통합 비서</h2>
+              <p className="text-xs font-bold text-gray-400 mt-0.5">식단과 혈당을 말씀만 해주세요 ✨</p>
             </div>
           </div>
           <button

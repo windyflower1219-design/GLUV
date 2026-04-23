@@ -231,13 +231,7 @@ export default function GlucosePage() {
           </div>
         </div>
 
-        {/* 간소화된 입력 버튼 */}
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="w-full bg-indigo-500 text-white py-5 rounded-[32px] font-black text-sm shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
-        >
-          <Plus size={20} strokeWidth={3} /> 혈당 기록 추가하기
-        </button>
+        {/* 혈당 입력 버튼 삭제 - 통합 음성 비서로 대체 */}
 
         {/* 기록 목록 */}
         <div className="space-y-4 pt-4">

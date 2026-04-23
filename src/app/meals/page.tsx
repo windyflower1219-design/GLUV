@@ -254,21 +254,7 @@ export default function MealsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { icon: <MicIcon size={22} />, label: '말하기', color: 'bg-blue-50 text-blue-500 border-blue-100', action: openVoiceInput },
-            { icon: <Plus size={22} />, label: '직접쓰기', color: 'bg-slate-50 text-slate-500 border-slate-100', action: openVoiceInput },
-          ].map(({ icon, label, color, action }) => (
-            <button
-              key={label}
-              onClick={action}
-              className={`p-4 rounded-3xl ${color} border flex flex-col items-center gap-2 active:scale-95 transition-all shadow-sm`}
-            >
-              <div className="p-2 rounded-2xl bg-white shadow-sm">{icon}</div>
-              <span className="text-xs font-bold">{label}</span>
-            </button>
-          ))}
-        </div>
+        {/* 입력 섹션 삭제 - 전역 버튼과 중복됨 */}
 
         <div className="space-y-6 pb-4">
           {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(type => {

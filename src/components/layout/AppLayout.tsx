@@ -120,7 +120,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <button
           onClick={openVoiceInput}
           className="fab-mic bg-gray-800 shadow-xl shadow-gray-200"
-          aria-label="오늘 뭐 드셨나요?"
+          aria-label="식단 또는 혈당 기록하기"
         >
           <MicIcon size={28} className="text-white" />
         </button>
