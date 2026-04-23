@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Mic, X, Send, Loader2, ChevronRight, Sparkles, Clock } from 'lucide-react';
 import { useVoiceInput } from '@/lib/hooks/useVoiceInput';
-import { parseMealText } from '@/lib/algorithms/mealParser';
+import { parseMealText, lookupFoodByName } from '@/lib/algorithms/mealParser';
+import { saveParseCorrection } from '@/lib/firebase/firestore';
+import { useBackHandler } from '@/context/BackHandlerContext';
 import type { FoodItem, VoiceParseResult, MeasurementType } from '@/types';
 
 interface VoiceInputModalProps {
@@ -17,6 +19,16 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
   const [isParsing, setIsParsing] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [editedGlucose, setEditedGlucose] = useState<number | undefined>(undefined);
+  // 파싱 직후 "원래" 음식명 스냅샷 — 저장 시 사용자가 고친 내역과 비교해 학습 로그를 쌓는다.
+  const originalParseRef = useRef<{
+    rawText: string;
+    parsedNames: string[];
+    confidence: number;
+    source: 'server' | 'local';
+    modelUsed?: string | null;
+    recovery?: boolean;
+  } | null>(null);
+  const [chipPicked, setChipPicked] = useState<string[]>([]);
   
   const [selectedTime, setSelectedTime] = useState<string>(() => {
     const tzoffset = (new Date()).getTimezoneOffset() * 60000;
@@ -29,6 +41,16 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
       const result = await parseMealText(text);
       setParseResult(result);
       setTextInput(text);
+      // 학습 로그용: 이 시점의 파싱 결과를 스냅샷으로 기록
+      originalParseRef.current = {
+        rawText: text,
+        parsedNames: (result.parsedFoods || []).map(f => f.name || '').filter(Boolean),
+        confidence: result.confidenceScore,
+        source: result.confidenceScore >= 0.9 ? 'server' : 'local',
+        modelUsed: result._diagnostics?.modelUsed ?? null,
+        recovery: !!result._diagnostics?.recovery,
+      };
+      setChipPicked([]);
       if (result.glucoseValue !== undefined) {
         setEditedGlucose(result.glucoseValue);
       }
@@ -47,12 +69,34 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
   const { state, interimTranscript, error, isSupported, startListening, stopListening } =
     useVoiceInput(handleVoiceResult);
 
+  // 모달이 떠있는 동안 back 제스처는 모달을 닫는 용도로만 쓴다.
+  useBackHandler(() => {
+    if (isSubmitting) return true; // 저장 중엔 닫히지 않도록 소비만
+    if (parseResult) {
+      // 결과 확인 단계에서는 입력 화면으로 되돌아가기
+      setParseResult(null);
+      setEditedGlucose(undefined);
+      return true;
+    }
+    onClose();
+    return true;
+  }, true);
+
   const handleTextSubmit = async () => {
     if (!textInput.trim()) return;
     setIsParsing(true);
     try {
       const result = await parseMealText(textInput);
       setParseResult(result);
+      originalParseRef.current = {
+        rawText: textInput,
+        parsedNames: (result.parsedFoods || []).map(f => f.name || '').filter(Boolean),
+        confidence: result.confidenceScore,
+        source: result.confidenceScore >= 0.9 ? 'server' : 'local',
+        modelUsed: result._diagnostics?.modelUsed ?? null,
+        recovery: !!result._diagnostics?.recovery,
+      };
+      setChipPicked([]);
       if (result.glucoseValue !== undefined) {
         setEditedGlucose(result.glucoseValue);
       }
@@ -65,6 +109,31 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
       setIsParsing(false);
     }
   };
+
+  /**
+   * Top-3 후보 chip을 눌렀을 때 parsedFoods에 해당 음식을 추가한다.
+   * 로컬 DB에 있으면 영양정보까지 같이 채우고, 없으면 사용자가 수동으로 채우도록 placeholder 값.
+   */
+  const handleCandidatePick = useCallback((candidateName: string) => {
+    setParseResult(prev => {
+      if (!prev) return prev;
+      const base = lookupFoodByName(candidateName);
+      const newFood = {
+        id: `food_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        name: base?.name ?? candidateName,
+        quantity: 1,
+        unit: base?.unit ?? '인분',
+        carbs: base?.carbs ?? 0,
+        calories: base?.calories ?? 0,
+        glycemicIndex: base?.glycemicIndex ?? 0,
+        protein: base?.protein ?? 0,
+        fat: base?.fat ?? 0,
+        sodium: base?.sodium ?? 0,
+      };
+      return { ...prev, parsedFoods: [...prev.parsedFoods, newFood] };
+    });
+    setChipPicked(prev => [...prev, candidateName]);
+  }, []);
 
   const isListening = state === 'listening';
 
@@ -223,6 +292,38 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
               </div>
             )}
 
+            {/* Top-3 후보 chip UI — 저확신 파싱 결과를 재질문 없이 빠르게 교정 */}
+            {parseResult.topCandidates && parseResult.topCandidates.length > 0 && (
+              <div className="mb-5 p-4 rounded-2xl bg-rose-50/60 border border-rose-100">
+                <p className="text-[11px] font-black text-rose-500 mb-3 flex items-center gap-1">
+                  <Sparkles size={11} /> 혹시 이 중 하나였나요?
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {parseResult.topCandidates.map((c) => {
+                    const picked = chipPicked.includes(c.name);
+                    return (
+                      <button
+                        key={c.name}
+                        onClick={() => !picked && handleCandidatePick(c.name)}
+                        disabled={picked}
+                        className={`text-[11px] font-bold px-3 py-2 rounded-2xl border shadow-sm transition-all active:scale-95 ${
+                          picked
+                            ? 'bg-rose-500 text-white border-rose-500'
+                            : 'bg-white text-gray-600 border-rose-100 hover:text-rose-600 hover:border-rose-200'
+                        }`}
+                        title={c.reason}
+                      >
+                        {picked ? '✓ ' : ''}{c.name}
+                        <span className="ml-1 text-[9px] opacity-60">
+                          {Math.round((c.confidence ?? 0) * 100)}%
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* 혈당 인식 결과 카드 */}
             {editedGlucose !== undefined && (
               <div className="mb-6">
@@ -320,9 +421,65 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
               ))}
 
               {parseResult.parsedFoods.length === 0 && editedGlucose === undefined && (
-                <div className="py-12 bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100 flex flex-col items-center gap-2">
+                <div className="py-8 px-4 bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100 flex flex-col items-center gap-3">
                   <span className="text-4xl">🌵</span>
-                  <p className="text-xs font-bold text-gray-400 text-center">정보를 찾지 못했어요. 다시 말씀해 주실래요?</p>
+                  <p className="text-xs font-bold text-gray-500 text-center leading-relaxed">
+                    AI가 음식이나 혈당 수치를 전혀 찾지 못했어요.<br/>
+                    조금 더 구체적으로 말해 보시거나, 직접 추가해 주세요.
+                  </p>
+                  {/* 실패 원인 상세 진단 — 개발/운영 환경 모두에서 도움됨 */}
+                  {parseResult._diagnostics && (
+                    <details className="mt-2 text-[10px] font-mono text-gray-400 w-full max-w-[320px]">
+                      <summary className="cursor-pointer text-gray-500 font-bold text-[10px]">🔎 실패 원인 보기</summary>
+                      <div className="mt-2 p-3 bg-white/80 rounded-xl border border-gray-100 text-left space-y-1">
+                        <div>
+                          <span className="text-gray-500">reason: </span>
+                          <span className="text-rose-500 font-bold">
+                            {parseResult._diagnostics.reason || '(unknown)'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">modelUsed: </span>
+                          <span className="text-indigo-500 font-bold">
+                            {parseResult._diagnostics.modelUsed || 'none'}
+                          </span>
+                        </div>
+                        {parseResult._diagnostics.attempts && parseResult._diagnostics.attempts.length > 0 && (
+                          <div>
+                            <div className="text-gray-500 mb-0.5">attempts:</div>
+                            {parseResult._diagnostics.attempts.map((a, i) => (
+                              <div key={i} className="pl-2 text-[9px] break-all">
+                                <span className="text-gray-600">{a.model}</span>
+                                {a.error && <span className="text-rose-400"> — {a.error}</span>}
+                                {!a.error && <span className="text-emerald-500"> ✓</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (!parseResult) return;
+                      const newFood = {
+                        id: `food_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                        name: textInput || '직접 입력',
+                        quantity: 1,
+                        unit: '인분',
+                        carbs: 0,
+                        calories: 0,
+                        glycemicIndex: 0,
+                        protein: 0,
+                        fat: 0,
+                        sodium: 0,
+                      };
+                      setParseResult({ ...parseResult, parsedFoods: [newFood] });
+                    }}
+                    className="mt-2 bg-white text-gray-600 text-[11px] font-black px-4 py-2 rounded-2xl border border-gray-200 shadow-sm hover:border-rose-200 hover:text-rose-500 transition-all active:scale-95"
+                  >
+                    + 직접 추가하기
+                  </button>
                 </div>
               )}
             </div>
@@ -359,7 +516,35 @@ export default function VoiceInputModal({ onClose, onConfirm, isSubmitting = fal
                     value: editedGlucose,
                     type: parseResult.detectedMeasType || 'random'
                   } : undefined;
-                  
+
+                  // 파싱→저장 과정에서 생긴 사용자 교정 이력을 백그라운드로 기록.
+                  // 실패해도 원래 저장 플로우에는 영향 없음 (fire-and-forget).
+                  try {
+                    const snap = originalParseRef.current;
+                    const correctedNames = parseResult.parsedFoods.map(f => f.name || '').filter(Boolean);
+                    if (snap && (snap.parsedNames.length > 0 || correctedNames.length > 0 || chipPicked.length > 0)) {
+                      const correctionType: 'candidate_chip' | 'name_edited' | 'manual_add' | 'accepted_as_is' =
+                        chipPicked.length > 0 ? 'candidate_chip'
+                        : snap.parsedNames.length === 0 && correctedNames.length > 0 ? 'manual_add'
+                        : JSON.stringify(snap.parsedNames) !== JSON.stringify(correctedNames) ? 'name_edited'
+                        : 'accepted_as_is';
+                      void saveParseCorrection({
+                        timestamp: new Date(),
+                        rawVoiceInput: snap.rawText,
+                        parsedNames: snap.parsedNames,
+                        correctedNames,
+                        confidence: snap.confidence,
+                        correctionType,
+                        source: snap.source,
+                        modelUsed: snap.modelUsed,
+                        recovery: snap.recovery,
+                      });
+                    }
+                  } catch (e) {
+                    // 학습 로그는 best-effort — 실패해도 무시
+                    console.warn('parse correction logging skipped:', e);
+                  }
+
                   onConfirm(parseResult.parsedFoods, parseResult.rawText, glucoseData, new Date(selectedTime));
                 }}
                 disabled={(parseResult.parsedFoods.length === 0 && editedGlucose === undefined) || isSubmitting}

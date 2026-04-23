@@ -28,7 +28,9 @@ export const useUnifiedStorage = () => {
     const prediction = predictGlucoseResponse(fullFoods, 100);
     
     try {
-      // 1. 식단 저장 - 기록 시각 기반으로 mealType 계산 (현재 시각 X)
+      // 1, 2번을 병렬로 실행 (순차 await 제거 → 네트워크 지연 중첩 X)
+      const tasks: Promise<any>[] = [];
+
       if (fullFoods.length > 0) {
         const mealData: Omit<Meal, 'id'> = {
           userId: userId,
@@ -40,19 +42,22 @@ export const useUnifiedStorage = () => {
           totalCalories: fullFoods.reduce((s, f) => s + (f.calories || 0) * (f.quantity || 1), 0),
           glucotypeScore: prediction.riskLevel,
         };
-        await saveMeal(mealData);
+        tasks.push(saveMeal(mealData));
       }
 
-      // 2. 혈당 저장
       if (glucose) {
-        await saveGlucose({
-          userId: userId,
-          timestamp: timestamp,
-          value: glucose.value,
-          measurementType: glucose.type,
-          notes: `음성 입력으로 자동 기록: "${rawText}"`
-        });
+        tasks.push(
+          saveGlucose({
+            userId: userId,
+            timestamp: timestamp,
+            value: glucose.value,
+            measurementType: glucose.type,
+            notes: `음성 입력으로 자동 기록: "${rawText}"`,
+          }),
+        );
       }
+
+      await Promise.all(tasks);
       return true;
     } catch (error) {
       console.error('Error in unified storage:', error);

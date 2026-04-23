@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
+import { clearFirestoreCache } from '@/lib/firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -34,6 +35,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     try {
       await signOut(auth);
+      // 이전 사용자 데이터가 다음 로그인 사용자에게 노출되지 않도록 캐시 비우기
+      clearFirestoreCache();
     } catch (error) {
       console.error('Logout failed:', error);
       throw error;

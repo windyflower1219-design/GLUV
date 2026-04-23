@@ -66,7 +66,194 @@ const KOREAN_FOOD_DB: Record<string, Omit<FoodItem, 'id' | 'quantity'>> = {
   '소주': { name: '소주', unit: '병', carbs: 0, calories: 400, glycemicIndex: 0, protein: 0, fat: 0, sodium: 0 },
   '해장국': { name: '해장국', unit: '그릇', carbs: 20, calories: 450, glycemicIndex: 55, protein: 30, fat: 15, sodium: 1200 },
   '황태 해장국': { name: '황태 해장국', unit: '그릇', carbs: 15, calories: 350, glycemicIndex: 50, protein: 25, fat: 10, sodium: 1100 },
+  // 롱테일 한식 — 저빈도지만 인식 실패가 잦은 메뉴들
+  '돼지고기 짜글이': { name: '돼지고기 짜글이', unit: '인분', carbs: 18, calories: 380, glycemicIndex: 50, protein: 22, fat: 20, sodium: 1300 },
+  '짜글이': { name: '짜글이', unit: '인분', carbs: 15, calories: 320, glycemicIndex: 50, protein: 18, fat: 18, sodium: 1200 },
+  '꽁치 짜글이': { name: '꽁치 짜글이', unit: '인분', carbs: 12, calories: 300, glycemicIndex: 45, protein: 24, fat: 15, sodium: 1100 },
+  '콩나물국': { name: '콩나물국', unit: '그릇', carbs: 6, calories: 70, glycemicIndex: 35, protein: 5, fat: 2, sodium: 750 },
+  '콩나물 해장국': { name: '콩나물 해장국', unit: '그릇', carbs: 18, calories: 300, glycemicIndex: 50, protein: 18, fat: 8, sodium: 1100 },
+  '뼈 해장국': { name: '뼈 해장국', unit: '그릇', carbs: 22, calories: 520, glycemicIndex: 55, protein: 32, fat: 22, sodium: 1300 },
+  '순댓국': { name: '순댓국', unit: '그릇', carbs: 35, calories: 550, glycemicIndex: 60, protein: 28, fat: 22, sodium: 1400 },
+  '돼지국밥': { name: '돼지국밥', unit: '그릇', carbs: 60, calories: 580, glycemicIndex: 65, protein: 30, fat: 20, sodium: 1500 },
+  '도가니탕': { name: '도가니탕', unit: '그릇', carbs: 18, calories: 400, glycemicIndex: 40, protein: 35, fat: 18, sodium: 900 },
+  '알탕': { name: '알탕', unit: '그릇', carbs: 10, calories: 280, glycemicIndex: 40, protein: 22, fat: 14, sodium: 1300 },
 };
+
+// --- 별칭(alias) → 표준 DB 키 매핑 ----------------------------------
+// ASR 띄어쓰기·된소리 오인식·지역별 이명(異名)을 흡수하기 위한 보조 사전.
+// 여기에 추가된 별칭은 substring/자모 기반 매칭에서 모두 동일한 canonical key로 귀결된다.
+const FOOD_ALIASES: Record<string, string> = {
+  // 황태 해장국 계열 — 황태/북어/동태는 사실상 같은 어종으로 묶어 해석
+  '황태해장국': '황태 해장국',
+  '황탯국': '황태 해장국',
+  '황태국': '황태 해장국',
+  '북어해장국': '황태 해장국',
+  '북어 해장국': '황태 해장국',
+  '동태해장국': '황태 해장국',
+  '동태 해장국': '황태 해장국',
+  // 돼지고기 짜글이 계열
+  '돼지고기짜글이': '돼지고기 짜글이',
+  '돼지짜글이': '돼지고기 짜글이',
+  '돼지 짜글이': '돼지고기 짜글이',
+  '돼지고기 자글이': '돼지고기 짜글이', // 된소리 오인식
+  '돼지자글이': '돼지고기 짜글이',
+  '자글이': '짜글이',
+  '짜글이찌개': '짜글이',
+  '짜글이 찌개': '짜글이',
+  // 기타
+  '꽁치자글이': '꽁치 짜글이',
+  '콩나물국밥': '콩나물 해장국',
+  '뼈해장국': '뼈 해장국',
+  '뼈다귀해장국': '뼈 해장국',
+  '뼈다귀 해장국': '뼈 해장국',
+  '순대국': '순댓국',
+  '순대 국': '순댓국',
+};
+
+// =====================================================
+// 한글 자모 분해 + 음운 정규화 유틸 (외부 의존성 없음)
+// - 된소리(ㄲ/ㄸ/ㅃ/ㅆ/ㅉ)와 거센소리(ㅋ/ㅌ/ㅍ/ㅊ)를 해당 평음으로 흡수해
+//   "짜글이"↔"자글이", "황태"↔"황대"/"황다" 수준의 ASR 오인식을 같은 키로 매핑.
+// =====================================================
+const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const JUNG = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+const JONG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+
+// 된소리·거센소리 → 평음 (음운 정규화)
+const TENSE_NORMALIZE: Record<string, string> = {
+  'ㄲ': 'ㄱ', 'ㅋ': 'ㄱ',
+  'ㄸ': 'ㄷ', 'ㅌ': 'ㄷ',
+  'ㅃ': 'ㅂ', 'ㅍ': 'ㅂ',
+  'ㅆ': 'ㅅ',
+  'ㅉ': 'ㅈ', 'ㅊ': 'ㅈ',
+};
+const normalizeJamo = (j: string) => TENSE_NORMALIZE[j] ?? j;
+
+function decomposeToJamo(s: string, normalize = true): string[] {
+  const out: string[] = [];
+  for (const ch of s) {
+    const code = ch.codePointAt(0)!;
+    if (code >= 0xAC00 && code <= 0xD7A3) {
+      const off = code - 0xAC00;
+      const cho = CHO[Math.floor(off / 588)];
+      const jung = JUNG[Math.floor((off % 588) / 28)];
+      const jongIdx = off % 28;
+      out.push(normalize ? normalizeJamo(cho) : cho);
+      out.push(jung);
+      if (jongIdx > 0) {
+        const jong = JONG[jongIdx];
+        out.push(normalize ? normalizeJamo(jong) : jong);
+      }
+    } else if (ch.trim()) {
+      // 공백은 자모 비교에서 제거(띄어쓰기 변이 흡수)
+      out.push(ch.toLowerCase());
+    }
+  }
+  return out;
+}
+
+// 자모 배열 간 Levenshtein 거리
+function jamoDistance(a: string[], b: string[]): number {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp: number[] = new Array(n + 1);
+  for (let j = 0; j <= n; j++) dp[j] = j;
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1]
+        ? prev
+        : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = tmp;
+    }
+  }
+  return dp[n];
+}
+
+// 공백·조사 제거 + 자모 분해(정규화)
+const STRIP_PARTICLES = /(은|는|이|가|을|를|의|에|과|와|도|랑|이랑)$/;
+function canonicalizeToken(tok: string): string[] {
+  let t = tok.trim();
+  t = t.replace(STRIP_PARTICLES, '');
+  return decomposeToJamo(t, true);
+}
+
+/**
+ * 입력 텍스트에서 음식 DB(+별칭)에 대해 상위 후보를 자모 거리 기반으로 돌려준다.
+ * substring 매칭이 실패했을 때 백업 경로로, 또는 항상 topCandidates 계산용으로 사용.
+ *
+ * @returns [{ foodKey, distance, windowText, position }]  — distance 오름차순
+ */
+function fuzzyFindCandidates(
+  text: string,
+  limit = 3,
+): Array<{ foodKey: string; distance: number; windowText: string; position: number }> {
+  const candidates: Array<{ foodKey: string; distance: number; windowText: string; position: number }> = [];
+  const allKeys = [...Object.keys(KOREAN_FOOD_DB), ...Object.keys(FOOD_ALIASES)];
+
+  // 슬라이딩 윈도우로 텍스트를 잘라 각 DB 키와 비교
+  const textTrimmed = text.replace(/\s+/g, ' ').trim();
+  const uniqueWindows = new Set<string>();
+  const windows: Array<{ text: string; position: number }> = [];
+
+  // 단어 토큰 + 인접 토큰 쌍(복합 메뉴명 대비: "돼지고기 짜글이")
+  const tokens = textTrimmed.split(/\s+/);
+  let cursor = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const single = tokens[i];
+    if (single && !uniqueWindows.has(single)) {
+      uniqueWindows.add(single);
+      windows.push({ text: single, position: cursor });
+    }
+    if (i < tokens.length - 1) {
+      const pair = `${tokens[i]} ${tokens[i + 1]}`;
+      if (!uniqueWindows.has(pair)) {
+        uniqueWindows.add(pair);
+        windows.push({ text: pair, position: cursor });
+      }
+    }
+    cursor += single.length + 1;
+  }
+
+  for (const key of allKeys) {
+    const canonicalKey = FOOD_ALIASES[key] ?? key;
+    if (!KOREAN_FOOD_DB[canonicalKey]) continue;
+    const keyJamo = canonicalizeToken(key);
+    const keyLen = keyJamo.length;
+    if (keyLen < 3) continue; // 너무 짧은 키는 노이즈 유발 → 패스
+
+    let best: { dist: number; windowText: string; position: number } | null = null;
+    for (const w of windows) {
+      const wJamo = canonicalizeToken(w.text);
+      // 길이 차이가 너무 크면 계산 생략(최적화)
+      if (Math.abs(wJamo.length - keyLen) > Math.max(2, Math.floor(keyLen / 2))) continue;
+      const d = jamoDistance(wJamo, keyJamo);
+      if (!best || d < best.dist) best = { dist: d, windowText: w.text, position: w.position };
+    }
+
+    if (!best) continue;
+    // 임계치: 자모 길이의 25% 또는 최소 1
+    const threshold = Math.max(1, Math.floor(keyLen * 0.25));
+    if (best.dist <= threshold) {
+      // 이미 같은 canonical key로 후보 들어갔으면 더 좋은 쪽만 유지
+      const existing = candidates.find(c => c.foodKey === canonicalKey);
+      if (!existing || existing.distance > best.dist) {
+        if (existing) {
+          existing.distance = best.dist;
+          existing.windowText = best.windowText;
+          existing.position = best.position;
+        } else {
+          candidates.push({ foodKey: canonicalKey, distance: best.dist, windowText: best.windowText, position: best.position });
+        }
+      }
+    }
+  }
+
+  return candidates.sort((a, b) => a.distance - b.distance).slice(0, limit);
+}
 
 // 수량 표현 파서
 const QUANTITY_PATTERNS: Array<{ pattern: RegExp; quantity: number; unit: string }> = [
@@ -96,24 +283,28 @@ function extractQuantity(text: string): { quantity: number; unit: string } {
 
 function findFoodInText(text: string): Array<{ foodKey: string; position: number }> {
   const found: Array<{ foodKey: string; position: number }> = [];
-  const foodKeys = Object.keys(KOREAN_FOOD_DB);
+  // DB 원본 키 + 별칭(alias) 키를 모두 후보로 사용하되, alias는 canonical로 환원해 기록
+  const aliasPairs: Array<{ surface: string; canonical: string }> = [
+    ...Object.keys(KOREAN_FOOD_DB).map(k => ({ surface: k, canonical: k })),
+    ...Object.entries(FOOD_ALIASES).map(([surface, canonical]) => ({ surface, canonical })),
+  ];
 
-  // 긴 이름 먼저 매칭
-  const sortedKeys = foodKeys.sort((a, b) => b.length - a.length);
+  // 긴 이름 먼저 매칭(지역 greedy) — 복합 메뉴명 우선
+  aliasPairs.sort((a, b) => b.surface.length - a.surface.length);
 
-  for (const key of sortedKeys) {
-    const idx = text.indexOf(key);
+  for (const { surface, canonical } of aliasPairs) {
+    const idx = text.indexOf(surface);
     if (idx !== -1) {
-      // 이미 매칭된 영역과 겹치지 않는지 확인
       const overlaps = found.some(f => {
         const start1 = f.position;
         const end1 = f.position + f.foodKey.length;
         const start2 = idx;
-        const end2 = idx + key.length;
-        return Math.max(start1, start2) < Math.min(end1, end2); // 겹침 판별 (교집합 길이 > 0)
+        const end2 = idx + surface.length;
+        return Math.max(start1, start2) < Math.min(end1, end2);
       });
       if (!overlaps) {
-        found.push({ foodKey: key, position: idx });
+        // canonical로 기록(영양정보는 DB의 canonical 엔트리에서 조회)
+        found.push({ foodKey: canonical, position: idx });
       }
     }
   }
@@ -151,7 +342,17 @@ export async function parseMealText(
   }
 
   // --- Local Fallback Parser ---
-  const foundFoods = findFoodInText(voiceText);
+  let foundFoods = findFoodInText(voiceText);
+
+  // 1차 substring 매칭이 실패했으면 자모 거리 기반 fuzzy 재시도
+  // (예: "돼지고기 자글이"→"돼지고기 짜글이", "황제해장국"→"황태 해장국")
+  if (foundFoods.length === 0) {
+    const fuzzy = fuzzyFindCandidates(voiceText, 3);
+    if (fuzzy.length > 0 && fuzzy[0].distance <= 1) {
+      // 거리 1 이하면 자신있게 채택
+      foundFoods = [{ foodKey: fuzzy[0].foodKey, position: fuzzy[0].position }];
+    }
+  }
   // 한국어 조사(이/은/가/는/의)와 중간 단어("수치")를 유연하게 처리
   // 예: "혈당이 140", "혈당은 135", "혈당 수치가 110", "혈당 120", "혈당 180이야"
   let glucoseMatch = voiceText.match(/혈당[은이가는의]?\s*(?:수치[가는은이]?\s*)?(\d{2,3})/);
@@ -213,13 +414,44 @@ export async function parseMealText(
     };
   }
 
+  // 음식도 혈당도 못 찾았어도 fuzzy 후보가 있다면 UI에서 chip으로 제시할 수 있도록 반환
+  const fuzzyFallback = fuzzyFindCandidates(voiceText, 3);
+  const topCandidates = fuzzyFallback.length > 0
+    ? fuzzyFallback.map(c => ({
+        name: c.foodKey,
+        confidence: Math.max(0.2, 1 - c.distance / 4),
+        reason: `자모거리 ${c.distance}`,
+      }))
+    : undefined;
+
   return {
     rawText: voiceText,
     parsedFoods: [],
     confidenceScore: 0,
     needsClarification: true,
-    clarificationQuestion: '죄송해요, 조금 더 구체적으로 음식 이름이나 혈당 수치를 말씀해 주시겠어요?',
+    clarificationQuestion: topCandidates
+      ? '혹시 이 중 하나였나요? 아래 후보를 눌러서 골라주세요.'
+      : '죄송해요, 조금 더 구체적으로 음식 이름이나 혈당 수치를 말씀해 주시겠어요?',
+    topCandidates,
   };
+}
+
+/**
+ * 음식명으로 로컬 DB(+별칭)에서 영양정보를 조회한다.
+ * 서버 응답에 없는 후보(Top-3 chip tap 등)에 사용.
+ */
+export function lookupFoodByName(name: string): Omit<FoodItem, 'id' | 'quantity'> | null {
+  if (!name) return null;
+  const trimmed = name.trim();
+  if (KOREAN_FOOD_DB[trimmed]) return KOREAN_FOOD_DB[trimmed];
+  const aliasTarget = FOOD_ALIASES[trimmed] || FOOD_ALIASES[trimmed.replace(/\s+/g, '')];
+  if (aliasTarget && KOREAN_FOOD_DB[aliasTarget]) return KOREAN_FOOD_DB[aliasTarget];
+  // 자모 거리 기반 최근접 키 하나 시도
+  const fuzzy = fuzzyFindCandidates(trimmed, 1);
+  if (fuzzy.length > 0 && fuzzy[0].distance <= 1) {
+    return KOREAN_FOOD_DB[fuzzy[0].foodKey] ?? null;
+  }
+  return null;
 }
 
 export type { VoiceParseResult };

@@ -68,23 +68,41 @@ export default function MealsPage() {
   };
 
   const saveEdit = async (meal: Meal) => {
+    const foods = editDraft;
+    const totalCarbs = foods.reduce((s, f) => s + (Number(f.carbs) || 0) * (Number(f.quantity) || 1), 0);
+    const totalCalories = foods.reduce((s, f) => s + (Number(f.calories) || 0) * (Number(f.quantity) || 1), 0);
+    const prediction = predictGlucoseResponse(foods, 100);
+
+    // Optimistic update: 로컬 state를 먼저 반영해 UI 즉시 업데이트
+    const prev = meals;
+    setMeals((cur) =>
+      cur.map((m) =>
+        m.id === meal.id
+          ? {
+              ...m,
+              parsedFoods: foods,
+              totalCarbs,
+              totalCalories,
+              glucotypeScore: prediction.riskLevel,
+            }
+          : m,
+      ),
+    );
+    setEditingId(null);
+    setEditDraft([]);
     setIsSavingEdit(true);
+
     try {
-      const foods = editDraft;
-      const totalCarbs = foods.reduce((s, f) => s + (Number(f.carbs) || 0) * (Number(f.quantity) || 1), 0);
-      const totalCalories = foods.reduce((s, f) => s + (Number(f.calories) || 0) * (Number(f.quantity) || 1), 0);
-      const prediction = predictGlucoseResponse(foods, 100);
       await updateMeal(meal.id, {
         parsedFoods: foods,
         totalCarbs,
         totalCalories,
         glucotypeScore: prediction.riskLevel,
       });
-      await fetchMeals(false);
-      setEditingId(null);
-      setEditDraft([]);
       window.dispatchEvent(new CustomEvent('record-saved'));
     } catch (err: any) {
+      console.error('수정 실패, 롤백:', err);
+      setMeals(prev); // 롤백
       alert(`수정에 실패했습니다: ${err?.message || err}`);
     } finally {
       setIsSavingEdit(false);
@@ -113,9 +131,19 @@ export default function MealsPage() {
   }, [fetchMeals]);
 
   const handleDelete = async (id: string) => {
-    await deleteMeal(id);
+    // Optimistic: 로컬 state에서 즉시 제거
+    const prev = meals;
+    setMeals((cur) => cur.filter((m) => m.id !== id));
     setDeletingId(null);
-    fetchMeals();
+    try {
+      await deleteMeal(id);
+      // 다른 페이지(대시보드)에서도 최신 상태 동기화
+      window.dispatchEvent(new CustomEvent('record-saved'));
+    } catch (err: any) {
+      console.error('삭제 실패, 롤백:', err);
+      setMeals(prev); // 롤백
+      alert(`삭제에 실패했습니다: ${err?.message || err}`);
+    }
   };
 
   const groupedMeals = meals.reduce<Record<MealType, Meal[]>>((acc, meal) => {

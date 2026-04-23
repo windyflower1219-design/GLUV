@@ -139,6 +139,47 @@ export interface VoiceParseResult {
   confidenceScore: number;
   needsClarification: boolean;
   clarificationQuestion?: string;
+  /**
+   * 저확신 상황에서 사용자에게 보여줄 상위 후보들.
+   * 1차 인식이 실패했거나 confidence가 낮을 때 활용한다.
+   * - name: 제안할 표준 음식명(로컬 DB 키 또는 Gemini 추정명)
+   * - confidence: 0~1 사이 상대 확신도
+   * - reason?: 디버그/설명용(예: "음운 복원", "자모거리 1", "동의어")
+   */
+  topCandidates?: Array<{ name: string; confidence: number; reason?: string }>;
+  /**
+   * 서버가 어떤 모델/시도 경로로 응답을 만들었는지 기록 (선택).
+   * 디버깅 + parse_corrections 로그 품질 향상용.
+   */
+  _diagnostics?: {
+    modelUsed?: string | null;
+    attempts?: Array<{ model: string; error?: string }>;
+    recovery?: boolean;
+    reason?: string;
+  };
+}
+
+// 파싱 결과 vs 사용자 최종 입력의 차이를 기록해
+// 향후 프롬프트/사전 개선에 재활용한다.
+export interface ParseCorrection {
+  id?: string;
+  userId?: string;
+  timestamp: Date;
+  rawVoiceInput: string;
+  /** 원래 파서가 뽑아낸 이름들 */
+  parsedNames: string[];
+  /** 사용자가 최종 저장한 이름들 */
+  correctedNames: string[];
+  /** 저장 시점의 confidence (API 0.9 / 로컬 0.6 / 저확신 0) */
+  confidence: number;
+  /** "name_edited" | "candidate_chip" | "manual_add" | "accepted_as_is" 등 */
+  correctionType: 'name_edited' | 'candidate_chip' | 'manual_add' | 'accepted_as_is';
+  /** 로컬 fallback 여부 판별용 (선택) */
+  source?: 'server' | 'local';
+  /** 어떤 모델로 파싱됐는지 (server 경로만) */
+  modelUsed?: string | null;
+  /** recovery pass가 개입했는지 (server 경로만) */
+  recovery?: boolean;
 }
 
 // 차트 데이터

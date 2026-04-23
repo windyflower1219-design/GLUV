@@ -67,32 +67,48 @@ export function useGlucoseData() {
     id: string,
     updates: Partial<Omit<GlucoseReading, 'id'>>,
   ) => {
+    // Optimistic update: 로컬 state를 먼저 업데이트해 UI는 즉시 반영
+    let prevSnapshot: GlucoseReading[] = [];
+    setReadings((prev) => {
+      prevSnapshot = prev;
+      return prev
+        .map((r) => (r.id === id ? { ...r, ...updates } as GlucoseReading : r))
+        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    });
+
     setIsSubmitting(true);
     try {
       await updateGlucose(id, updates);
-      await fetchReadings(false);
       return true;
     } catch (error) {
-      console.error('Failed to update glucose reading:', error);
+      console.error('Failed to update glucose reading, reverting:', error);
+      setReadings(prevSnapshot); // 롤백
       throw error;
     } finally {
       setIsSubmitting(false);
     }
-  }, [fetchReadings]);
+  }, []);
 
   const removeReading = useCallback(async (id: string) => {
+    // Optimistic update: 삭제를 즉시 반영
+    let prevSnapshot: GlucoseReading[] = [];
+    setReadings((prev) => {
+      prevSnapshot = prev;
+      return prev.filter((r) => r.id !== id);
+    });
+
     setIsSubmitting(true);
     try {
       await deleteGlucose(id);
-      await fetchReadings(false);
       return true;
     } catch (error) {
-      console.error('Failed to delete glucose reading:', error);
+      console.error('Failed to delete glucose reading, reverting:', error);
+      setReadings(prevSnapshot); // 롤백
       throw error;
     } finally {
       setIsSubmitting(false);
     }
-  }, [fetchReadings]);
+  }, []);
 
   const getChartData = useCallback((): GlucoseChartData[] => {
     const cutoff = new Date();
