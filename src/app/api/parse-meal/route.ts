@@ -161,15 +161,14 @@ function supportsJsonMode(modelName: string): boolean {
 
 async function callModel(apiKey: string, modelName: string, prompt: string): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const useJson = supportsJsonMode(modelName);
-  const model = genAI.getGenerativeModel({
-    model: modelName,
+  const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: 'v1' });
+  const result = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
       responseMimeType: 'application/json',
       temperature: 0.2,
     },
   });
-  const result = await model.generateContent(prompt);
   return result.response.text().trim();
 }
 
