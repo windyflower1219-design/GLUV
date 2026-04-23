@@ -437,7 +437,17 @@ export default function MealsPage() {
                                 return (
                                   <div className="space-y-4">
                                     <div className="p-5 rounded-[28px] bg-gradient-to-br from-white to-gray-50 border border-gray-100 shadow-sm">
-                                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">혈당 영향 패널</p>
+                                      <div className="flex items-center justify-between mb-4">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                                          <Activity size={12} className="text-rose-400" /> 혈당 영향 패널
+                                        </p>
+                                        <button 
+                                          onClick={(e) => { e.stopPropagation(); setShowGuide(true); }}
+                                          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                                        >
+                                          <HelpCircle size={14} className="text-gray-300 hover:text-rose-400" />
+                                        </button>
+                                      </div>
                                       
                                       <div className="flex items-center justify-between mb-6">
                                         <div>
