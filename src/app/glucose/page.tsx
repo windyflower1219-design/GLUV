@@ -59,12 +59,55 @@ export default function GlucosePage() {
     const tzoffset = (new Date()).getTimezoneOffset() * 60000;
     return (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
   });
-
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const {
     readings, loading, isSubmitting, currentGlucose, averageGlucose, timeInRange,
     addReading, editReading, removeReading, getChartData, fetchReadings,
   } = useGlucoseData();
-  const chartData = getChartData();
+
+  // 날짜 선택 바용 미리 계산된 날짜 목록
+  const dateOffsets = React.useMemo(() => {
+    return [-3, -2, -1, 0, 1, 2, 3].map(offset => {
+      const d = new Date();
+      d.setDate(d.getDate() + offset);
+      return d;
+    });
+  }, []);
+
+  // 선택된 날짜에 따른 필터링된 데이터
+  const filteredReadings = React.useMemo(() => {
+    if (period !== 'day') return readings;
+    return readings.filter(r => 
+      r.timestamp.toDateString() === selectedDate.toDateString()
+    );
+  }, [readings, period, selectedDate]);
+
+  // 필터링된 데이터 기반 지표 재계산 (오늘 하루 탭일 때만)
+  const displayAverage = React.useMemo(() => {
+    if (period !== 'day' || filteredReadings.length === 0) return averageGlucose;
+    const sum = filteredReadings.reduce((s, r) => s + r.value, 0);
+    return Math.round(sum / filteredReadings.length);
+  }, [filteredReadings, averageGlucose, period]);
+
+  const displayTimeInRange = React.useMemo(() => {
+    if (period !== 'day' || filteredReadings.length === 0) return timeInRange;
+    const inRange = filteredReadings.filter(r => r.value >= 70 && r.value <= 140).length;
+    return Math.round((inRange / filteredReadings.length) * 100);
+  }, [filteredReadings, timeInRange, period]);
+
+  // 차트 데이터 필터링 (기간별 대응)
+  const chartData = React.useMemo(() => {
+    if (period === 'day') {
+      return filteredReadings
+        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+        .map(r => ({
+          time: r.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+          glucose: r.value,
+        }));
+    }
+    return getChartData(); // week/month는 기존 로직 활용
+  }, [filteredReadings, period, getChartData]);
+
   const weeklyAnalysis = analyzeWeeklyTrend(readings);
 
   // 편집/삭제 상태
@@ -189,6 +232,34 @@ export default function GlucosePage() {
           ))}
         </div>
 
+        {/* 기간별 날짜 선택 바 (오늘 하루 탭일 때만 노출) */}
+        {period === 'day' && (
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {dateOffsets.map(d => {
+              const isSelected = selectedDate.toDateString() === d.toDateString();
+              const isToday = new Date().toDateString() === d.toDateString();
+              return (
+                <div key={d.toISOString()}
+                  onClick={() => setSelectedDate(d)}
+                  className={`flex flex-col items-center px-3 py-2 rounded-2xl min-w-[56px] cursor-pointer transition-all ${
+                    isSelected 
+                      ? 'bg-[var(--color-accent-pink)] text-white shadow-lg scale-105' 
+                      : 'bg-white text-[var(--color-text-secondary)] border border-[var(--color-border)]'
+                  }`}
+                >
+                  <span className="text-[10px] font-bold opacity-80">
+                    {d.toLocaleDateString('ko-KR', { weekday: 'short' })}
+                  </span>
+                  <span className="text-lg font-extrabold">
+                    {d.getDate()}
+                  </span>
+                  {isToday && !isSelected && <div className="w-1 h-1 rounded-full bg-[var(--color-accent-pink)] mt-0.5" />}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* 핵심 지표 카드 3개 */}
         <div className="grid grid-cols-3 gap-3">
           <StatCard
@@ -202,7 +273,7 @@ export default function GlucosePage() {
           />
           <StatCard
             label="평균 혈당"
-            value={loading ? '-' : averageGlucose}
+            value={loading ? '-' : displayAverage}
             unit="mg/dL"
             icon={<Target size={16} />}
             color="text-indigo-500"
@@ -211,7 +282,7 @@ export default function GlucosePage() {
           />
           <StatCard
             label="목표 범위"
-            value={loading ? '-' : timeInRange}
+            value={loading ? '-' : displayTimeInRange}
             unit="%"
             icon={<Heart size={16} />}
             color="text-emerald-500"
@@ -225,7 +296,9 @@ export default function GlucosePage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-black text-gray-800 text-sm flex items-center gap-2">
                <span className="w-1.5 h-4 bg-[var(--color-accent-pink)] rounded-full mr-1" />
-              {period === 'day' ? '오늘 하루 흐름' : period === 'week' ? '한 주간의 기록' : '한 달간의 기록'}
+              {period === 'day' 
+                ? (selectedDate.toDateString() === new Date().toDateString() ? '오늘 하루 흐름' : `${selectedDate.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} 기록`)
+                : period === 'week' ? '한 주간의 기록' : '한 달간의 기록'}
             </h2>
             <div className="text-[10px] font-bold text-gray-400 bg-white px-2 py-1 rounded-lg border border-gray-50 flex items-center gap-1">
               <Calendar size={10} /> mg/dL
@@ -285,19 +358,19 @@ export default function GlucosePage() {
           <div className="flex items-center justify-between mb-4 px-1">
             <h2 className="font-black text-gray-800 text-sm flex items-center gap-2">
                <span className="w-1.5 h-4 bg-indigo-400 rounded-full mr-1" />
-              최근 혈당 기록
+              {period === 'day' ? '이날의 기록' : '최근 혈당 기록'}
             </h2>
           </div>
           
           <div className="space-y-3">
             {loading ? (
               <div className="h-16 skeleton rounded-3xl" />
-            ) : readings.length === 0 ? (
+            ) : filteredReadings.length === 0 ? (
               <div className="py-12 bg-white/40 rounded-[32px] border-2 border-dashed border-gray-100 flex flex-col items-center gap-2">
                 <span className="text-4xl">💧</span>
                 <p className="text-xs font-bold text-gray-400">아직 입력된 기록이 없어요!</p>
               </div>
-            ) : readings.slice().reverse().slice(0, 5).map(reading => {
+            ) : filteredReadings.slice().reverse().map(reading => {
               const isHigh = reading.value > 140;
               const isLow = reading.value < 70;
               const type = MEASUREMENT_TYPES[reading.measurementType];
