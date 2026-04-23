@@ -109,19 +109,61 @@ export function useGlucoseData() {
     }
   }, []);
 
-  const getChartData = useCallback((): GlucoseChartData[] => {
+  const getChartData = useCallback((period: 'day' | 'week' | 'month' = 'day'): GlucoseChartData[] => {
+    const now = new Date();
     const cutoff = new Date();
-    cutoff.setHours(cutoff.getHours() - 24);
+    
+    if (period === 'day') cutoff.setHours(0, 0, 0, 0);
+    else if (period === 'week') {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1); // 월요일 기준
+      cutoff.setDate(diff);
+      cutoff.setHours(0, 0, 0, 0);
+    } else {
+      cutoff.setDate(1);
+      cutoff.setHours(0, 0, 0, 0);
+    }
 
-    return readings
+    const filtered = readings
       .filter(r => r.timestamp >= cutoff)
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-      .map(r => ({
-        time: r.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-        glucose: r.value,
-        targetMin: 70,
-        targetMax: 140,
-      }));
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+    return filtered.map(r => ({
+      time: period === 'day' 
+        ? r.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+        : r.timestamp.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }),
+      glucose: r.value,
+      targetMin: 70,
+      targetMax: 140,
+    }));
+  }, [readings]);
+
+  const getStatsByPeriod = useCallback((period: 'day' | 'week' | 'month' = 'day') => {
+    const now = new Date();
+    const cutoff = new Date();
+    
+    if (period === 'day') cutoff.setHours(0, 0, 0, 0);
+    else if (period === 'week') {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      cutoff.setDate(diff);
+      cutoff.setHours(0, 0, 0, 0);
+    } else {
+      cutoff.setDate(1);
+      cutoff.setHours(0, 0, 0, 0);
+    }
+
+    const filtered = readings.filter(r => r.timestamp >= cutoff);
+    
+    if (filtered.length === 0) return { avg: 0, max: 0, min: 0, count: 0 };
+
+    const values = filtered.map(r => r.value);
+    return {
+      avg: Math.round(values.reduce((s, v) => s + v, 0) / values.length),
+      max: Math.max(...values),
+      min: Math.min(...values),
+      count: filtered.length
+    };
   }, [readings]);
 
   const averageGlucose = readings.length > 0
@@ -135,7 +177,7 @@ export function useGlucoseData() {
 
   return {
     readings,
-    loading: isInitialLoading, // 기존 호환성을 위해 loading 이름 유지
+    loading: isInitialLoading,
     isSubmitting,
     currentGlucose,
     averageGlucose,
@@ -144,6 +186,7 @@ export function useGlucoseData() {
     editReading,
     removeReading,
     getChartData,
+    getStatsByPeriod,
     fetchReadings,
   };
 }

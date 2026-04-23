@@ -115,15 +115,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {children}
       </main>
 
-      {/* 전역 플로팅 마이크 버튼 - 로그인 페이지에선 숨김 */}
-      {!isLoginPage && (
-        <button
-          onClick={openVoiceInput}
-          className="fab-mic bg-gray-800 shadow-xl shadow-gray-200"
-          aria-label="식단 또는 혈당 기록하기"
-        >
-          <MicIcon size={28} className="text-white" />
-        </button>
+      {/* 전역 플로팅 마이크 버튼 - 로그인 및 관리자 페이지에선 숨김 */}
+      {!isLoginPage && !pathname.startsWith('/admin') && (
+        <div className="fixed bottom-[100px] right-6 z-50">
+          <button
+            onClick={openVoiceInput}
+            className="fab-mic-new group"
+            aria-label="식단 또는 혈당 기록하기"
+          >
+            <MicIcon size={24} className="text-white group-hover:scale-110 transition-transform" />
+          </button>
+        </div>
       )}
 
       {/* 전역 음성 입력 모달 */}

@@ -52,9 +52,17 @@ export default function DashboardPage() {
   } = useHealthData();
   
   const [latestInsight, setLatestInsight] = useState('오늘도 건강 기록을 남겨보세요! 꾸준한 기록이 건강 관리의 첫 걸음이에요 💕');
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
 
-  const { currentGlucose, averageGlucose, timeInRange, getChartData, loading: glucoseLoading, fetchReadings } = useGlucoseData();
-  const chartData = getChartData();
+  const { 
+    currentGlucose, 
+    getChartData, 
+    getStatsByPeriod, 
+    loading: glucoseLoading 
+  } = useGlucoseData();
+
+  const chartData = getChartData(period);
+  const stats = getStatsByPeriod(period);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -86,63 +94,106 @@ export default function DashboardPage() {
         subtitle={greeting.text}
       />
 
-      <div className="px-5 space-y-5 pt-4">
-        {/* 현재 혈당 게이지 카드 */}
+      <div className="px-5 space-y-6 pt-4">
+        {/* 기간 선택 탭 */}
+        <div className="flex bg-white/50 backdrop-blur-sm p-1 rounded-2xl border border-[var(--color-border)] w-fit mx-auto shadow-sm">
+          {[
+            { id: 'day', label: '일간' },
+            { id: 'week', label: '주간' },
+            { id: 'month', label: '월간' }
+          ].map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setPeriod(t.id as any)}
+              className={`px-6 py-2 rounded-xl text-[11px] font-black transition-all ${
+                period === t.id 
+                  ? 'bg-[var(--color-accent)] text-white shadow-md' 
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 현재 혈당 게이지 카드 (빨간 박스 영역 개편) */}
         <div className="bg-white rounded-[40px] p-8 shadow-sm border border-gray-50 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-full -mr-16 -mt-16 opacity-50" />
-          <p className="text-xs font-black text-gray-300 uppercase tracking-widest text-center mb-8">당신의 혈당</p>
-          <GlucoseGauge value={currentGlucose} loading={loading} />
-          <div className="flex items-center justify-center gap-2 mt-8 py-2 px-4 bg-gray-50/50 rounded-2xl w-fit mx-auto border border-gray-50">
-             <span className="w-1 h-1 rounded-full bg-gray-300" />
-             <p className="text-[10px] font-bold text-gray-400">
-               {now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 측정됨
-             </p>
+          <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--color-primary-soft)] rounded-full -mr-24 -mt-24 opacity-30 blur-3xl" />
+          <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] text-center mb-8">
+            {period === 'day' ? '오늘' : period === 'week' ? '이번 주' : '이번 달'} 평균 혈당
+          </p>
+          
+          <GlucoseGauge value={stats.avg} loading={loading} />
+          
+          {/* 최대/최소 수치 표시 */}
+          <div className="mt-8 flex items-center justify-center gap-12">
+            <div className="text-center">
+              <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase mb-1">MAX</p>
+              <p className="text-lg font-black text-[var(--color-accent)]">{stats.max || '-'}</p>
+            </div>
+            <div className="w-px h-8 bg-gray-100" />
+            <div className="text-center">
+              <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase mb-1">MIN</p>
+              <p className="text-lg font-black text-[var(--color-warning)]">{stats.min || '-'}</p>
+            </div>
           </div>
         </div>
 
-        {/* 오늘 통계 빠른 보기 */}
-        <div className="flex gap-4">
-          <StatCard
-            label="오늘 평균"
-            value={averageGlucose || '-'}
-            unit="mg/dL"
-            icon={<Activity size={20} />}
-            color="text-indigo-500"
-            bg="bg-indigo-50"
-          />
-          <StatCard
-            label="목표 도달"
-            value={timeInRange || '-'}
-            unit="%"
-            icon={<Heart size={20} />}
-            color="text-rose-500"
-            bg="bg-rose-50"
-          />
-        </div>
+        {/* 오늘 통계 및 추이 그래프 (파란 박스 영역 개편) */}
+        <div className="bg-white rounded-[40px] p-6 shadow-sm border border-gray-50">
+          <div className="flex items-center justify-between mb-8 px-1">
+            <h2 className="font-black text-[var(--color-text-primary)] text-sm flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-[var(--color-accent)] rounded-full" />
+              혈당 변화 추이
+            </h2>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
+              <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Trend View</span>
+            </div>
+          </div>
 
-        <div className="flex gap-4">
-          <StatCard
-            label="섭취 칼로리"
-            value={totalCalories.toLocaleString()}
-            unit="kcal"
-            icon={<Flame size={20} />}
-            color="text-orange-500"
-            bg="bg-orange-50"
-          />
-          <StatCard
-            label="탄수화물"
-            value={totalCarbs}
-            unit="g"
-            icon={<Utensils size={20} />}
-            color="text-amber-500"
-            bg="bg-amber-50"
-            trend={userProfile ? `목표 ${userProfile.targetKcal}kcal` : undefined}
-          />
+          <div className="h-48 min-w-0 mb-6">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
+                <defs>
+                  <linearGradient id="glucoseGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="6 6" stroke="#fcf2f4" vertical={false} />
+                <XAxis dataKey="time" tick={{ fill: '#B7A5A5', fontSize: 9, fontWeight: '800' }} tickLine={false} axisLine={false} dy={10} />
+                <YAxis domain={['auto', 'auto']} tick={{ fill: '#B7A5A5', fontSize: 9, fontWeight: '800' }} tickLine={false} axisLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="glucose"
+                  stroke="var(--color-accent)"
+                  strokeWidth={4}
+                  fill="url(#glucoseGrad)"
+                  dot={{ r: 4, fill: 'white', stroke: 'var(--color-accent)', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: 'var(--color-accent)', stroke: 'white', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* 주요 지표 퀵 뷰 */}
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="bg-[var(--color-bg-primary)] p-4 rounded-3xl border border-[var(--color-border)]">
+              <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase mb-1">목표 범위 내</p>
+              <p className="text-lg font-black text-[var(--color-text-primary)]">{timeInRange}%</p>
+            </div>
+            <div className="bg-[var(--color-bg-primary)] p-4 rounded-3xl border border-[var(--color-border)]">
+              <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase mb-1">섭취 칼로리</p>
+              <p className="text-lg font-black text-[var(--color-text-primary)]">{totalCalories} <span className="text-[10px]">kcal</span></p>
+            </div>
+          </div>
         </div>
 
         {/* AI 인사이트 배너 */}
         <Link href="/insights">
-          <div className="relative overflow-hidden rounded-[32px] p-6 bg-gradient-to-br from-indigo-600 to-rose-400 shadow-lg shadow-indigo-100">
+          <div className="relative overflow-hidden rounded-[32px] p-6 bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-primary)] shadow-lg shadow-[var(--color-primary)]/20">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0 animate-bounce-slow">
@@ -157,53 +208,14 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        {/* 혈당 추이 차트 */}
-        <div className="bg-white rounded-[40px] p-6 shadow-sm border border-gray-50">
-          <div className="flex items-center justify-between mb-6 px-1">
-            <h2 className="font-black text-gray-800 text-sm flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-indigo-400 rounded-full mr-1" />
-              혈당 변화 그래프
-            </h2>
-            <Link href="/glucose" className="text-[10px] font-bold text-indigo-400 bg-indigo-50 px-2 py-1 rounded-lg">
-              자세히 보기
-            </Link>
-          </div>
-          <div className="h-40 min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
-                <defs>
-                  <linearGradient id="glucoseGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#818cf8" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="6 6" stroke="#f8fafc" vertical={false} />
-                <XAxis dataKey="time" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={5} />
-                <YAxis domain={[40, 240]} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} tickLine={false} axisLine={false} />
-                <ReferenceLine y={userProfile?.targetGlucoseMax || 140} stroke="#fda4af" strokeDasharray="4 4" label={{ value: 'MAX', position: 'right', fill: '#fda4af', fontSize: 8, fontWeight: 'bold' }} />
-                <ReferenceLine y={userProfile?.targetGlucoseMin || 70} stroke="#fde68a" strokeDasharray="4 4" label={{ value: 'MIN', position: 'right', fill: '#fde68a', fontSize: 8, fontWeight: 'bold' }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="glucose"
-                  stroke="#818cf8"
-                  strokeWidth={3}
-                  fill="url(#glucoseGrad)"
-                  dot={{ r: 4, fill: 'white', stroke: '#818cf8', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
         {/* 오늘 식사 기록 요약 */}
-        <div className="pb-4">
+        <div className="pb-8">
           <div className="flex items-center justify-between mb-4 px-1">
-            <h2 className="font-black text-gray-800 text-sm flex items-center gap-2">
-               <span className="w-1.5 h-4 bg-rose-400 rounded-full mr-1" />
+            <h2 className="font-black text-[var(--color-text-primary)] text-sm flex items-center gap-2">
+               <span className="w-1.5 h-4 bg-[var(--color-accent)] rounded-full mr-1" />
               오늘 드신 것들
             </h2>
-            <Link href="/meals" className="text-[10px] font-bold text-rose-400 bg-rose-50 px-2 py-1 rounded-lg">
+            <Link href="/meals" className="text-[10px] font-bold text-[var(--color-accent)] bg-[var(--color-primary-soft)] px-2 py-1 rounded-lg">
               기록 보기
             </Link>
           </div>
@@ -241,6 +253,16 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* 푸터 */}
+        <div className="pt-8 pb-12 text-center">
+          <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">GLUV Healthy Life Assistant</p>
+          <p className="text-[9px] font-bold text-gray-300">© 2026 DongHyeok Choi. All rights reserved.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
       </div>
     </div>
   );

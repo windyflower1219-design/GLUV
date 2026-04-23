@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Droplet } from 'lucide-react';
+import { Sparkles } from './Icons';
 
 interface LoadingScreenProps {
   isVisible: boolean;
@@ -10,60 +10,57 @@ interface LoadingScreenProps {
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ isVisible }) => {
   return (
     <div 
-      className={`fixed inset-0 z-[1000] flex flex-col items-center justify-between py-16 transition-all duration-700 ease-in-out ${
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--color-bg-primary)] transition-all duration-1000 ${
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
-      style={{
-        background: 'linear-gradient(180deg, #FFF9F2 0%, #FFF3E6 100%)'
-      }}
     >
-      {/* Top Section - Brand */}
-      <div className="flex flex-col items-center gap-4 mt-20 animate-fade-in">
-        <div className="relative">
-          <div className="absolute -inset-4 bg-[var(--color-accent-pink)]/20 rounded-full blur-2xl animate-loading-pulse" />
-          <div className="relative w-20 h-20 bg-white rounded-3xl shadow-2xl flex items-center justify-center animate-logo-float border border-white">
-            <Droplet className="text-[var(--color-accent-pink)]" size={40} fill="currentColor" />
-          </div>
-        </div>
-        <h1 className="text-3xl font-extrabold tracking-tighter text-[var(--color-text-primary)]">
-          GLUV
-        </h1>
-        <p className="text-[var(--color-text-secondary)] font-medium">AI 혈당 & 식단 관리</p>
+      {/* 배경 장식 애니메이션 */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[var(--color-primary-soft)] rounded-full blur-[100px] animate-pulse opacity-60" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[var(--color-bg-secondary)] rounded-full blur-[120px] animate-pulse opacity-50" style={{ animationDelay: '700ms' }} />
       </div>
 
-      {/* Middle Section - Loading Indicator */}
-      <div className="flex flex-col items-center gap-6">
-        <div className="flex gap-1.5">
-          {[0, 1, 2].map((i) => (
-            <div 
-              key={i}
-              className="w-2.5 h-2.5 rounded-full bg-[var(--color-accent-pink)] animate-pulse"
-              style={{ animationDelay: `${i * 0.2}s` }}
-            />
-          ))}
+      {/* 메인 로딩 콘텐츠 */}
+      <div className="relative z-10 flex flex-col items-center">
+        <div className="relative mb-12">
+          {/* 퍼지는 물방울 효과 */}
+          <div className="absolute inset-0 bg-[var(--color-primary)] rounded-full animate-ping opacity-20 scale-150" />
+          <div className="absolute inset-0 bg-[var(--color-accent)] rounded-full animate-ping opacity-10 scale-[2]" style={{ animationDelay: '300ms' }} />
+          
+          {/* 중앙 로고 아이콘 */}
+          <div className="w-24 h-24 bg-white rounded-[32px] shadow-2xl flex items-center justify-center relative z-20 animate-logo-float border-2 border-[var(--color-border)]">
+            <div className="text-[var(--color-accent)]">
+              <Sparkles size={48} />
+            </div>
+          </div>
+        </div>
+
+        {/* 텍스트 애니메이션 */}
+        <div className="text-center space-y-3">
+          <h1 className="text-3xl font-black text-[var(--color-text-primary)] tracking-tighter">
+            GLUV<span className="text-[var(--color-accent)]">.</span>
+          </h1>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-xs font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em] animate-pulse">
+              Syncing Health Data
+            </p>
+            <div className="flex gap-1">
+              {[0, 1, 2].map((i) => (
+                <div 
+                  key={i} 
+                  className="w-1 h-1 rounded-full bg-[var(--color-primary)] animate-bounce"
+                  style={{ animationDelay: `${i * 0.2}s` }}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Section - Ad Placeholder / Tip */}
-      <div className="w-full max-w-sm px-6 mb-10 animate-slide-up">
-        <div className="ad-placeholder w-full aspect-[16/9] glass-card flex flex-col items-center justify-center p-8 text-center gap-3">
-          <div className="p-3 rounded-2xl bg-white/50 text-[var(--color-accent-pink)]">
-            <Droplet size={24} />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-[var(--color-text-primary)] mb-1">
-              더 건강한 내일을 위한 파트너
-            </p>
-            <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-              혈당 스파이크를 줄이는 가장 쉬운 방법,<br />GLUV와 함께 시작하세요.
-            </p>
-          </div>
-          <div className="mt-2 px-4 py-1.5 bg-[var(--color-accent-pink)] text-white text-[10px] font-bold rounded-full shadow-lg shadow-pink-200">
-            Learn More
-          </div>
-        </div>
-        <p className="text-center mt-6 text-[10px] text-[var(--color-text-secondary)] font-medium opacity-50">
-          © 2024 GLUV Healthcare. All rights reserved.
+      {/* 하단 카피라이트 */}
+      <div className="absolute bottom-12 text-center">
+        <p className="text-[9px] font-bold text-gray-300 uppercase tracking-widest">
+          Premium Health Assistant
         </p>
       </div>
     </div>

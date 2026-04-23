@@ -38,10 +38,10 @@ const GlucoseGauge: React.FC<GlucoseGaugeProps> = ({
   const isLow = value < targetMin;
   
   const config = isHigh 
-    ? { label: '조금 높아요!', color: 'text-rose-500', bg: 'bg-rose-50', icon: '🍰' }
+    ? { label: '조금 높아요!', color: 'text-[var(--color-accent)]', bg: 'bg-[var(--color-primary-soft)]', icon: '🍰' }
     : isLow 
-    ? { label: '낮은 편이에요!', color: 'text-amber-600', bg: 'bg-amber-50', icon: '🍎' }
-    : { label: '참 잘하고 있어요!', color: 'text-emerald-500', bg: 'bg-emerald-50', icon: '✨' };
+    ? { label: '낮은 편이에요!', color: 'text-[var(--color-warning)]', bg: 'bg-[#FFF9F0]', icon: '🍎' }
+    : { label: '참 잘하고 있어요!', color: 'text-[var(--color-success)]', bg: 'bg-[#F0FFF6]', icon: '✨' };
 
   return (
     <div className="flex flex-col items-center">
@@ -53,18 +53,18 @@ const GlucoseGauge: React.FC<GlucoseGaugeProps> = ({
         {/* 수치 표시 */}
         <div className="relative z-10 text-center">
           <span className="text-4xl block mb-1">{config.icon}</span>
-          <p className="text-5xl font-black text-gray-800 tracking-tighter">{value}</p>
-          <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-1">mg / dL</p>
+          <p className="text-5xl font-black text-[var(--color-text-primary)] tracking-tighter">{value}</p>
+          <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mt-1">mg / dL</p>
         </div>
 
-        {/* 게이지 바 (SVG) */}
+        {/* 게이지 바 (SVG) - 핑크의 보색인 민트를 적절히 섞어 사용 */}
         <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full -rotate-90">
           <circle
             cx="50"
             cy="50"
             r="44"
             fill="none"
-            stroke={isHigh ? '#fda4af' : isLow ? '#fde68a' : '#6ee7b7'}
+            stroke={isHigh ? 'var(--color-accent)' : isLow ? 'var(--color-warning)' : 'var(--color-success)'}
             strokeWidth="8"
             strokeDasharray={`${Math.min(276, (value / 300) * 276)} 276`}
             strokeLinecap="round"
