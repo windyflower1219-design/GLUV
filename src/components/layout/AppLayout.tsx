@@ -17,6 +17,7 @@ import LoadingScreen from '@/components/common/LoadingScreen';
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.uid;
   const router = useRouter();
   const pathname = usePathname();
   const [showLoading, setShowLoading] = React.useState(true);
