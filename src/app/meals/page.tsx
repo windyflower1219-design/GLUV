@@ -18,6 +18,8 @@ import { useBackHandler } from '@/context/BackHandlerContext';
 import type { FoodItem, Meal, MealType, MeasurementType, GlucoseReading } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
+import { useHealthData } from '@/context/HealthDataContext';
+
 const MEAL_TYPE_LABELS: Record<MealType, { label: string; emoji: string; color: string; bg: string }> = {
   breakfast: { label: '아침', emoji: '🌅', color: 'text-orange-500', bg: 'bg-orange-50' },
   lunch: { label: '점심', emoji: '☀️', color: 'text-yellow-600', bg: 'bg-yellow-50' },
@@ -46,6 +48,7 @@ export default function MealsPage() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
   
   const { openVoiceInput } = useVoiceInputContext();
   const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
