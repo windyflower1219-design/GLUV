@@ -13,10 +13,13 @@ interface AppLayoutProps {
   children: React.ReactNode;
 }
 
+import LoadingScreen from '@/components/common/LoadingScreen';
+
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [showLoading, setShowLoading] = React.useState(true);
 
   const { 
     isOpen, 
@@ -28,6 +31,22 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   
   const { saveUnifiedRecord } = useUnifiedStorage();
 
+  // 초기 로딩 제어 및 프리페칭
+  useEffect(() => {
+    // 1. 주요 페이지 프리페칭 (성능 최적화)
+    const routesToPrefetch = ['/dashboard', '/meals', '/glucose', '/insights', '/profile'];
+    routesToPrefetch.forEach(route => {
+      router.prefetch(route);
+    });
+
+    // 2. 최소 로딩 시간 확보 (브랜딩 및 광고 노출용)
+    const timer = setTimeout(() => {
+      setShowLoading(false);
+    }, 2500); // 2.5초간 노출
+
+    return () => clearTimeout(timer);
+  }, [router]);
+
   useEffect(() => {
     if (!authLoading && !user && pathname !== '/login') {
       router.push('/login');
@@ -38,11 +57,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     setIsSubmitting(true);
     try {
       await saveUnifiedRecord(foods, rawText, glucose, timestamp);
-      // 성공 시 페이지 데이터를 새로고침하기 위해 이벤트를 발생시키거나 
-      // 단순히 모달을 닫습니다. (실제 데이터 갱신은 각 페이지의 useEffect에서 처리)
       closeVoiceInput();
-      
-      // 페이지 자동 새로고침 유도 (간단한 방식)
       window.dispatchEvent(new CustomEvent('record-saved'));
     } catch (error: any) {
       alert(`저장에 실패했습니다: ${error.message || error}`);
@@ -52,11 +67,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   };
 
   const isLoginPage = pathname === '/login';
+  const isLoading = showLoading || authLoading;
 
   return (
     <div className="max-w-md mx-auto min-h-screen relative shadow-2xl shadow-indigo-100/20 bg-white overflow-x-hidden">
+      {/* 로딩 화면 */}
+      <LoadingScreen isVisible={isLoading} />
+
       {/* 메인 페이지 콘텐츠 */}
-      <main className="min-h-screen">
+      <main className={`min-h-screen transition-opacity duration-500 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
         {children}
       </main>
 
