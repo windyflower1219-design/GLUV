@@ -41,15 +41,19 @@ export const HealthDataProvider = ({ children }: { children: React.ReactNode }) 
     const targetDate = date || new Date();
     
     try {
-      const [mealsData, glucoseData, profileData] = await Promise.all([
+      const [mealsData, glucoseData, profileData, recentHistoryMeals] = await Promise.all([
         getMeals(userId, targetDate),
-        getGlucoseReadings(userId, 48),
+        getGlucoseReadings(userId, 168), // 최근 7일
         getUserProfile(userId),
+        getMeals(userId), // date 인자 없으면 최근 30일
       ]);
 
       setMeals(mealsData);
       setGlucoseReadings(glucoseData);
       setUserProfile(profileData);
+      // 최근 30일 데이터는 별도 상태로 관리하거나 기존 meals와 병합할 수 있음
+      // 여기서는 분석을 위해 meals 상태를 최근 30일 전체로 업데이트하는 방향으로 수정
+      setMeals(recentHistoryMeals);
       setLastUpdated(Date.now());
     } catch (error) {
       console.error('Failed to refresh health data:', error);
