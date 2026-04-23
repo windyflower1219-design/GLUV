@@ -10,10 +10,9 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 // 2026-04-23: v1beta 모델 목록 확인 결과 'gemini-2.5-flash' / 'gemini-2.0-flash'는 별칭이
 // 존재하지 않아 400이 떨어짐. 확인된 유효 이름으로 교체.
 const MODEL_CHAIN: string[] = [
-  process.env.GEMINI_MODEL_PRIMARY || 'gemini-flash-latest',
-  process.env.GEMINI_MODEL_FALLBACK || 'gemini-2.5-flash-lite',
-  'gemini-2.0-flash-001',
-  'gemma-3-27b-it',
+  process.env.GEMINI_MODEL_PRIMARY || 'gemini-1.5-flash',
+  process.env.GEMINI_MODEL_FALLBACK || 'gemini-1.5-flash-8b',
+  'gemini-1.5-pro',
 ];
 
 // Gemini 구조화 출력 스키마. SDK v0.24+에서 지원.
