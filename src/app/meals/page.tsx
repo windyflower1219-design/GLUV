@@ -119,16 +119,17 @@ export default function MealsPage() {
   const fetchMeals = useCallback(async (showLoading = true) => {
     if (showLoading) setIsInitialLoading(true);
     try {
-      const [data, readings, profile] = await Promise.all([
+      // 모든 필요한 데이터를 병렬로 요청하여 대기 시간 최소화
+      const [data, readings, profile, recent] = await Promise.all([
         getMeals(userId, selectedDate),
         getGlucoseReadings(userId, 48),
-        getUserProfile(userId)
+        getUserProfile(userId),
+        getMeals(userId) // 최근 30일 데이터 (히스토리용)
       ]);
+      
       setMeals(data);
       setGlucoseReadings(readings);
       setUserProfile(profile);
-
-      const recent = await getMeals(userId);
       setAllRecentMeals(recent);
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -159,15 +160,30 @@ export default function MealsPage() {
     }
   };
 
-  const groupedMeals = meals.reduce<Record<MealType, Meal[]>>((acc, meal) => {
-    if (!acc[meal.mealType]) acc[meal.mealType] = [];
-    acc[meal.mealType].push(meal);
-    return acc;
-  }, {} as Record<MealType, Meal[]>);
+  // 연산 최적화: 메모이제이션 적용
+  const groupedMeals = React.useMemo(() => {
+    return meals.reduce<Record<MealType, Meal[]>>((acc, meal) => {
+      if (!acc[meal.mealType]) acc[meal.mealType] = [];
+      acc[meal.mealType].push(meal);
+      return acc;
+    }, {} as Record<MealType, Meal[]>);
+  }, [meals]);
 
-  const todayCalories = meals.reduce((s, m) => s + m.totalCalories, 0);
+  const todayCalories = React.useMemo(() => meals.reduce((s, m) => s + m.totalCalories, 0), [meals]);
   const targetKcal = userProfile?.targetKcal || 2000;
-  const kcalPercentage = Math.min(Math.round((todayCalories / targetKcal) * 100), 100);
+  const kcalPercentage = React.useMemo(() => 
+    Math.min(Math.round((todayCalories / targetKcal) * 100), 100), 
+    [todayCalories, targetKcal]
+  );
+
+  // 날짜 선택 바용 미리 계산된 날짜 목록
+  const dateOffsets = React.useMemo(() => {
+    return [-3, -2, -1, 0, 1, 2, 3].map(offset => {
+      const d = new Date();
+      d.setDate(d.getDate() + offset);
+      return d;
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">
@@ -175,14 +191,12 @@ export default function MealsPage() {
       
       <div className="px-5 py-3 sticky top-[72px] bg-[var(--color-bg-primary)]/90 backdrop-blur z-10 border-b border-[var(--color-border)]">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {[-3, -2, -1, 0, 1, 2, 3].map(offset => {
-            const d = new Date();
-            d.setDate(d.getDate() + offset);
+          {dateOffsets.map(d => {
             const isSelected = selectedDate.toDateString() === d.toDateString();
             const isToday = new Date().toDateString() === d.toDateString();
             
             return (
-              <div key={offset}
+              <div key={d.toISOString()}
                 onClick={() => setSelectedDate(d)}
                 className={`flex flex-col items-center px-3 py-2 rounded-2xl min-w-[56px] cursor-pointer transition-all ${
                   isSelected 
