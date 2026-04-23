@@ -13,6 +13,7 @@ import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
 import { getMeals, getUserProfile, UserProfile } from '@/lib/firebase/firestore';
 import type { Meal } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { useHealthData } from '@/context/HealthDataContext';
 
 // ==============================
 // 커스텀 툴팁
@@ -41,9 +42,6 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
   }
   return null;
 }
-
-import { useHealthData } from '@/context/HealthDataContext';
-import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
 
 export default function DashboardPage() {
   const { 
