@@ -7,7 +7,8 @@ import {
 } from '@/components/common/Icons';
 import PageHeader from '@/components/common/PageHeader';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
-import { saveMeal, getMeals, deleteMeal, updateMeal, saveGlucose } from '@/lib/firebase/firestore';
+import { calculateMealImpact } from '@/lib/algorithms/mealAnalysis';
+import { saveMeal, getMeals, deleteMeal, updateMeal, saveGlucose, getGlucoseReadings } from '@/lib/firebase/firestore';
 import { useVoiceInputContext } from '@/context/VoiceInputContext';
 import { useUnifiedStorage } from '@/lib/hooks/useUnifiedStorage';
 import { useBackHandler } from '@/context/BackHandlerContext';
@@ -39,17 +40,19 @@ export default function MealsPage() {
   
   const { openVoiceInput, isSubmitting, setIsSubmitting } = useVoiceInputContext();
   const { saveUnifiedRecord } = useUnifiedStorage();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<FoodItem[]>([]);
+  const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
+  const [allRecentMeals, setAllRecentMeals] = useState<Meal[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const startEditing = (meal: Meal) => {
-    // 깊은 복사를 해야 원본을 건드리지 않음
     setEditDraft(meal.parsedFoods.map(f => ({ ...f })));
     setEditingId(meal.id);
     setDeletingId(null);
   };
+  
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<FoodItem[]>([]);
 
   const cancelEditing = () => {
     setEditingId(null);
@@ -115,12 +118,20 @@ export default function MealsPage() {
     try {
       const data = await getMeals(userId, selectedDate);
       setMeals(data);
+      
+      // 혈당 데이터 가져오기 (선택된 날짜 기준 충분한 범위)
+      const readings = await getGlucoseReadings(userId, 48); // 48시간치
+      setGlucoseReadings(readings);
+
+      // 히스토리 계산을 위해 최근 식사 가져오기 (비동기로 별도 처리 가능하지만 여기선 단순화)
+      const recent = await getMeals(userId); // 전체/최근 데이터
+      setAllRecentMeals(recent);
     } catch (error) {
-      console.error('Failed to fetch meals:', error);
+      console.error('Failed to fetch data:', error);
     } finally {
       if (showLoading) setIsInitialLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, userId]);
 
   useEffect(() => {
     fetchMeals();
@@ -411,47 +422,123 @@ export default function MealsPage() {
                             </div>
                           )}
 
-                          {/* 액션 버튼들 */}
+                          {/* 혈당 영향 패널 */}
                           {editingId !== meal.id && (
-                            deletingId === meal.id ? (
-                              <div className="self-end flex items-center gap-2 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2 animate-fade-in">
-                                <p className="text-xs font-bold text-rose-500">정말 삭제할까요?</p>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(meal.id); }}
-                                  className="text-[10px] font-black text-white bg-rose-400 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
-                                >
-                                  삭제
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setDeletingId(null); }}
-                                  className="text-[10px] font-black text-gray-500 bg-gray-100 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
-                                >
-                                  취소
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="self-end flex items-center gap-1">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); startEditing(meal); }}
-                                  className="p-2 text-indigo-300 hover:text-indigo-500 transition-colors"
-                                  aria-label="수정"
-                                  title="수정"
-                                >
-                                  <Pencil size={16} />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeletingId(meal.id);
-                                  }}
-                                  className="p-2 text-rose-300 hover:text-rose-500 transition-colors"
-                                  aria-label="삭제"
-                                  title="삭제"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            )
+                            <div className="mt-2 space-y-4 animate-fade-in">
+                              {(() => {
+                                const impact = calculateMealImpact(meal, glucoseReadings);
+                                
+                                // 히스토리 계산: 동일 음식이 포함된 과거 기록 찾기
+                                const currentFoodNames = meal.parsedFoods.map(f => f.name);
+                                const historyMatches = allRecentMeals.filter(m => 
+                                  m.id !== meal.id && 
+                                  m.parsedFoods.some(f => currentFoodNames.includes(f.name))
+                                );
+                                
+                                const historyImpacts = historyMatches
+                                  .map(m => calculateMealImpact(m, glucoseReadings))
+                                  .filter(imp => imp.status === 'complete');
+                                
+                                const avgHistoryDelta = historyImpacts.length > 0
+                                  ? Math.round(historyImpacts.reduce((s, i) => s + i.deltaBG, 0) / historyImpacts.length)
+                                  : null;
+
+                                if (impact.status !== 'complete') {
+                                  return (
+                                    <div className="p-4 rounded-2xl bg-gray-50 border border-dashed border-gray-200 text-center">
+                                      <p className="text-[10px] font-bold text-gray-400">데이터를 분석 중이거나 충분하지 않아요 🔍</p>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div className="space-y-4">
+                                    <div className="p-5 rounded-[28px] bg-gradient-to-br from-white to-gray-50 border border-gray-100 shadow-sm">
+                                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">혈당 영향 패널</p>
+                                      
+                                      <div className="flex items-center justify-between mb-6">
+                                        <div>
+                                          <p className={`text-3xl font-black ${impact.deltaBG > 40 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                            ΔBG +{Math.round(impact.deltaBG)}
+                                            <span className="text-xs ml-1 font-bold opacity-50 uppercase">mg/dL</span>
+                                          </p>
+                                          <p className="text-[10px] font-bold text-gray-400 mt-1">식전 {impact.baselineValue} 대비 변화</p>
+                                        </div>
+                                        <div className="w-12 h-12 rounded-2xl bg-white shadow-inner flex items-center justify-center text-xl border border-gray-50">
+                                          {impact.deltaBG > 40 ? '🧨' : '🥗'}
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-3 gap-3">
+                                        <div className="bg-white p-3 rounded-2xl border border-gray-50 shadow-sm text-center">
+                                          <p className="text-[10px] font-bold text-gray-400 mb-1">피크</p>
+                                          <p className="text-sm font-black text-gray-700">{impact.peakValue}</p>
+                                        </div>
+                                        <div className="bg-white p-3 rounded-2xl border border-gray-50 shadow-sm text-center">
+                                          <p className="text-[10px] font-bold text-gray-400 mb-1">피크 시간</p>
+                                          <p className="text-sm font-black text-gray-700">{impact.peakTimeMinutes}분</p>
+                                        </div>
+                                        <div className="bg-white p-3 rounded-2xl border border-gray-50 shadow-sm text-center">
+                                          <p className="text-[10px] font-bold text-gray-400 mb-1">2시간 뒤</p>
+                                          <p className="text-sm font-black text-gray-700">{impact.twoHourValue}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* 히스토리 칩 */}
+                                    {avgHistoryDelta !== null && (
+                                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-500 rounded-2xl border border-indigo-100 animate-slide-up">
+                                        <Sparkles size={12} className="animate-pulse" />
+                                        <span className="text-[10px] font-black">
+                                          이 음식은 보통 +{avgHistoryDelta} 만큼 올라요
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+
+                              {/* 액션 버튼들 */}
+                              {deletingId === meal.id ? (
+                                <div className="self-end flex items-center gap-2 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2 animate-fade-in">
+                                  <p className="text-xs font-bold text-rose-500">정말 삭제할까요?</p>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleDelete(meal.id); }}
+                                    className="text-[10px] font-black text-white bg-rose-400 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
+                                  >
+                                    삭제
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setDeletingId(null); }}
+                                    className="text-[10px] font-black text-gray-500 bg-gray-100 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
+                                  >
+                                    취소
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="self-end flex items-center gap-1">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); startEditing(meal); }}
+                                    className="p-2 text-indigo-300 hover:text-indigo-500 transition-colors"
+                                    aria-label="수정"
+                                    title="수정"
+                                  >
+                                    <Pencil size={16} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeletingId(meal.id);
+                                    }}
+                                    className="p-2 text-rose-300 hover:text-rose-500 transition-colors"
+                                    aria-label="삭제"
+                                    title="삭제"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
