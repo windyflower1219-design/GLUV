@@ -58,6 +58,7 @@ export default function DashboardPage() {
     currentGlucose, 
     getChartData, 
     getStatsByPeriod, 
+    timeInRange,
     loading: glucoseLoading 
   } = useGlucoseData();
 
