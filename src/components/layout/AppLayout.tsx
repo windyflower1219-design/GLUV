@@ -65,13 +65,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     return () => clearTimeout(timer);
   }, [userId]);
 
-  // 탭 전환 시 시각적 효과
+  // 탭 전환 시 시각적 효과 (설정 탭 전용)
   useEffect(() => {
-    setIsTabTransitioning(true);
-    const timer = setTimeout(() => {
+    // 설정(프로필) 탭으로 이동할 때만 브랜드 감성을 위한 물방울 로딩 노출
+    if (pathname === '/profile') {
+      setIsTabTransitioning(true);
+      const timer = setTimeout(() => {
+        setIsTabTransitioning(false);
+      }, 1200); // 1.2초간 노출
+      return () => clearTimeout(timer);
+    } else {
+      // 대시보드, 식단 등 다른 탭은 프리페칭된 데이터로 즉시 전환
       setIsTabTransitioning(false);
-    }, 400); // 전환 효과 시간을 약간 단축하여 쾌적함 유지
-    return () => clearTimeout(timer);
+    }
   }, [pathname]);
 
   useEffect(() => {
