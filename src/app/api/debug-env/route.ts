@@ -9,13 +9,23 @@ export async function GET() {
     geminiKeyExists: !!geminiKey,
     geminiKeyLength: geminiKey?.length,
     geminiKeyPrefix: geminiKey?.substring(0, 8),
-    firebaseKeyExists: !!(process.env.NEXT_PUBLIC_FIREBASE_API_KEY),
-    openaiKeyExists: !!(process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY),
   };
 
   if (geminiKey) {
     try {
       const genAI = new GoogleGenerativeAI(geminiKey);
+      
+      // 1. 모델 리스트 조회 테스트
+      try {
+        // SDK 버전에 따라 listModels 위치가 다를 수 있음
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${geminiKey}`);
+        const data = await response.json();
+        results.availableModels = data.models?.map((m: any) => m.name) || [];
+      } catch (listErr: any) {
+        results.listModelsError = listErr.message;
+      }
+
+      // 2. 직접 호출 테스트
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }, { apiVersion: 'v1' });
       const testResult = await model.generateContent('Say "OK"');
       results.geminiTest = 'SUCCESS: ' + testResult.response.text().trim();
