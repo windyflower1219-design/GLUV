@@ -11,9 +11,12 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 // 관리자 전용 대시보드
+const ADMIN_UID = 'WGlSyhUc5BQ0hiUfiZFq3sC1Cur1';
+
 export default function AdminPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const isAdmin = user?.uid === ADMIN_UID;
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState('2024-04-23 15:30');
   const [stats, setStats] = useState({
