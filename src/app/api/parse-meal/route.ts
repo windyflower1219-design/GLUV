@@ -7,9 +7,12 @@ import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 
 // 모델 체인: primary(JSON mode 지원 Gemini) → fallback(JSON mode 미지원 Gemma는 prompt-only)
+// 2026-04-23: v1beta 모델 목록 확인 결과 'gemini-2.5-flash' / 'gemini-2.0-flash'는 별칭이
+// 존재하지 않아 400이 떨어짐. 확인된 유효 이름으로 교체.
 const MODEL_CHAIN: string[] = [
-  process.env.GEMINI_MODEL_PRIMARY || 'gemini-2.5-flash',
-  process.env.GEMINI_MODEL_FALLBACK || 'gemini-2.0-flash',
+  process.env.GEMINI_MODEL_PRIMARY || 'gemini-flash-latest',
+  process.env.GEMINI_MODEL_FALLBACK || 'gemini-2.5-flash-lite',
+  'gemini-2.0-flash-001',
   'gemma-3-27b-it',
 ];
 
