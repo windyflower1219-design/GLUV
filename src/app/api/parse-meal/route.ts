@@ -10,9 +10,9 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 // 2026-04-23: v1beta 모델 목록 확인 결과 'gemini-2.5-flash' / 'gemini-2.0-flash'는 별칭이
 // 존재하지 않아 400이 떨어짐. 확인된 유효 이름으로 교체.
 const MODEL_CHAIN: string[] = [
-  process.env.GEMINI_MODEL_PRIMARY || 'gemini-1.5-flash-latest',
   'gemini-1.5-flash',
-  'gemini-1.5-pro-latest',
+  'gemini-1.5-pro',
+  'gemini-pro',
 ];
 
 // Gemini 구조화 출력 스키마. SDK v0.24+에서 지원.
@@ -299,13 +299,15 @@ export async function POST(req: Request) {
     if (!data) {
       return NextResponse.json({
         parsedFoods: [],
-        glucoseValue: undefined,
-        detectedMeasType: 'random',
-        detectedTime: undefined,
         confidenceScore: 0,
         needsClarification: true,
-        clarificationQuestion: '모든 AI 모델이 응답하지 않았어요. 잠시 후 다시 시도하거나 직접 입력해주세요.',
-        _diagnostics: { modelUsed: null, attempts: allAttempts, reason: 'all_models_failed' },
+        clarificationQuestion: 'AI 모델 접근에 실패했습니다. API 키의 모델 권한을 확인해주세요.',
+        _diagnostics: { 
+          modelUsed: null, 
+          attempts: allAttempts, 
+          reason: 'all_models_failed',
+          hint: 'Google AI Studio에서 Gemini 1.5 모델이 활성화되어 있는지 확인해주세요.'
+        },
       });
     }
 
