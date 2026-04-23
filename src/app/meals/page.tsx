@@ -34,16 +34,20 @@ function getMealType(): MealType {
 }
 
 export default function MealsPage() {
-  const { user } = useAuth();
-  const userId = user?.uid || 'guest';
+  const { 
+    meals: globalMeals, 
+    glucoseReadings: globalGlucose, 
+    userProfile, 
+    isLoading: dataLoading,
+    refreshData 
+  } = useHealthData();
+
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
   
   const { openVoiceInput } = useVoiceInputContext();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [showGuide, setShowGuide] = useState(false);
   const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
   const [allRecentMeals, setAllRecentMeals] = useState<Meal[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -106,6 +110,7 @@ export default function MealsPage() {
         totalCalories,
         glucotypeScore: prediction.riskLevel,
       });
+      refreshData();
       window.dispatchEvent(new CustomEvent('record-saved'));
     } catch (err: any) {
       console.error('수정 실패, 롤백:', err);
@@ -116,35 +121,42 @@ export default function MealsPage() {
     }
   };
 
-  const fetchMeals = useCallback(async (showLoading = true) => {
-    if (showLoading) setIsInitialLoading(true);
-    try {
-      // 모든 필요한 데이터를 병렬로 요청하여 대기 시간 최소화
-      const [data, readings, profile, recent] = await Promise.all([
-        getMeals(userId, selectedDate),
-        getGlucoseReadings(userId, 48),
-        getUserProfile(userId),
-        getMeals(userId) // 최근 30일 데이터 (히스토리용)
-      ]);
-      
-      setMeals(data);
-      setGlucoseReadings(readings);
-      setUserProfile(profile);
-      setAllRecentMeals(recent);
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      if (showLoading) setIsInitialLoading(false);
-    }
-  }, [selectedDate, userId]);
+  const { user } = useAuth();
 
+  // 컨텍스트 데이터 동기화
   useEffect(() => {
-    fetchMeals();
-    
-    const handleRefresh = () => fetchMeals(false);
-    window.addEventListener('record-saved', handleRefresh);
-    return () => window.removeEventListener('record-saved', handleRefresh);
-  }, [fetchMeals]);
+    // 오늘 날짜인 경우 컨텍스트 데이터 사용
+    if (selectedDate.toDateString() === new Date().toDateString()) {
+      setMeals(globalMeals);
+      setGlucoseReadings(globalGlucose);
+      setIsInitialLoading(dataLoading);
+    } else {
+      // 다른 날짜인 경우 별도 로드
+      const fetchSpecificDate = async () => {
+        setIsInitialLoading(true);
+        try {
+          if (user) {
+            const data = await getMeals(user.uid, selectedDate);
+            setMeals(data);
+          }
+        } finally {
+          setIsInitialLoading(false);
+        }
+      };
+      fetchSpecificDate();
+    }
+  }, [selectedDate, globalMeals, globalGlucose, dataLoading, user]);
+
+  // 히스토리 데이터는 배경에서 한 번 로드
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (user) {
+        const recent = await getMeals(user.uid);
+        setAllRecentMeals(recent);
+      }
+    };
+    fetchHistory();
+  }, [user]);
 
   const handleDelete = async (id: string) => {
     const prev = meals;

@@ -33,10 +33,13 @@ function formatRelativeTime(date: Date): string {
   return `${diffM}분 전`;
 }
 
+import { useHealthData } from '@/context/HealthDataContext';
+
 export default function InsightsPage() {
   const { user } = useAuth();
   const userId = user?.uid || 'guest';
   const { averageGlucose } = useGlucoseData();
+  const { meals: recentMealsData } = useHealthData();
   const [insights, setInsights] = useState<ActionableInsight[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -45,14 +48,13 @@ export default function InsightsPage() {
   const fetchAIInsights = useCallback(async () => {
     setIsGenerating(true);
     try {
-      const recentMeals = await getMeals(userId, new Date());
       const res = await fetch('/api/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
           averageGlucose,
-          recentMeals: recentMeals.map(m => m.parsedFoods.map((f: any) => f.name).join(', ')),
+          recentMeals: recentMealsData.map(m => m.parsedFoods.map((f: any) => f.name).join(', ')),
           isDemo: userId === 'guest'
         }),
       });

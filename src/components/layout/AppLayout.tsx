@@ -15,12 +15,17 @@ interface AppLayoutProps {
 
 import LoadingScreen from '@/components/common/LoadingScreen';
 
+import TabLoading from '@/components/common/TabLoading';
+import { useHealthData } from '@/context/HealthDataContext';
+
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
   const userId = user?.uid;
+  const { isLoading: dataLoading } = useHealthData();
   const router = useRouter();
   const pathname = usePathname();
   const [showLoading, setShowLoading] = React.useState(true);
+  const [isTabTransitioning, setIsTabTransitioning] = React.useState(false);
 
   const { 
     isOpen, 
@@ -31,20 +36,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   } = useVoiceInputContext();
   
   const { saveUnifiedRecord } = useUnifiedStorage();
-  const [dataPrimed, setDataPrimed] = React.useState(false);
 
   // 초기 로딩 제어 및 데이터 프리패칭(Cache Priming)
   useEffect(() => {
     if (!userId) return;
 
-    // 1. 주요 페이지 코드 프리페칭
-    const routesToPrefetch = ['/dashboard', '/meals', '/glucose', '/insights', '/profile'];
-    routesToPrefetch.forEach(route => {
-      router.prefetch(route);
-    });
-
-    // 2. 데이터 캐시 미리 채우기 (Cache Priming)
-    // 로딩 화면이 떠 있는 동안 백그라운드에서 미리 데이터를 가져와 firestore.ts의 READ_CACHE에 저장합니다.
+    // 1. 데이터 캐시 미리 채우기
     const primeData = async () => {
       try {
         const today = new Date();
@@ -52,23 +49,30 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           import('@/lib/firebase/firestore').then(m => m.getMeals(userId, today)),
           import('@/lib/firebase/firestore').then(m => m.getGlucoseReadings(userId, 48)),
           import('@/lib/firebase/firestore').then(m => m.getUserProfile(userId)),
-          import('@/lib/firebase/firestore').then(m => m.getMeals(userId)), // 히스토리용
+          import('@/lib/firebase/firestore').then(m => m.getMeals(userId)),
         ]);
-        setDataPrimed(true);
       } catch (err) {
         console.warn('Data priming failed:', err);
       }
     };
-
     primeData();
 
-    // 3. 최소 로딩 시간 확보 (3.5초로 연장하여 더 세밀한 데이터 준비)
+    // 2. 최소 로딩 시간 확보
     const timer = setTimeout(() => {
       setShowLoading(false);
     }, 3500); 
 
     return () => clearTimeout(timer);
-  }, [router, userId]);
+  }, [userId]);
+
+  // 탭 전환 시 시각적 효과
+  useEffect(() => {
+    setIsTabTransitioning(true);
+    const timer = setTimeout(() => {
+      setIsTabTransitioning(false);
+    }, 400); // 전환 효과 시간을 약간 단축하여 쾌적함 유지
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   useEffect(() => {
     if (!authLoading && !user && pathname !== '/login') {
@@ -90,15 +94,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   };
 
   const isLoginPage = pathname === '/login';
-  const isLoading = showLoading || authLoading;
+  const isInitialLoading = showLoading || authLoading;
 
   return (
     <div className="max-w-md mx-auto min-h-screen relative shadow-2xl shadow-indigo-100/20 bg-white overflow-x-hidden">
-      {/* 로딩 화면 */}
-      <LoadingScreen isVisible={isLoading} />
+      {/* 초기 스플래시 로딩 */}
+      <LoadingScreen isVisible={isInitialLoading} />
+
+      {/* 탭 전환 로딩 (데이터 로딩 중이거나 전환 중일 때) */}
+      {!isInitialLoading && <TabLoading isVisible={isTabTransitioning} />}
 
       {/* 메인 페이지 콘텐츠 */}
-      <main className={`min-h-screen transition-opacity duration-500 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
+      <main className={`min-h-screen transition-all duration-500 ${isInitialLoading ? 'opacity-0' : 'opacity-100'}`}>
         {children}
       </main>
 

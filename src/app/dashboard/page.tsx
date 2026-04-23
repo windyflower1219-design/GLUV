@@ -42,14 +42,20 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
   return null;
 }
 
+import { useHealthData } from '@/context/HealthDataContext';
+import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
+
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const userId = user?.uid || 'guest';
-  const [todayMeals, setTodayMeals] = useState<Meal[]>([]);
+  const { 
+    meals: todayMeals, 
+    userProfile, 
+    isLoading: dataLoading,
+    refreshData 
+  } = useHealthData();
+  
   const [latestInsight, setLatestInsight] = useState('오늘도 건강 기록을 남겨보세요! 꾸준한 기록이 건강 관리의 첫 걸음이에요 💕');
 
-  const { currentGlucose, averageGlucose, timeInRange, getChartData, loading, fetchReadings } = useGlucoseData();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { currentGlucose, averageGlucose, timeInRange, getChartData, loading: glucoseLoading, fetchReadings } = useGlucoseData();
   const chartData = getChartData();
   const [isMounted, setIsMounted] = useState(false);
 
@@ -57,28 +63,7 @@ export default function DashboardPage() {
     setIsMounted(true);
   }, []);
 
-  const fetchAllData = useCallback(async () => {
-    try {
-      const [meals, profile] = await Promise.all([
-        getMeals(userId, new Date()),
-        getUserProfile(userId)
-      ]);
-      setTodayMeals(meals);
-      setUserProfile(profile);
-      await fetchReadings();
-    } catch (error) {
-      console.error('Error fetching today data:', error);
-    }
-  }, [fetchReadings]);
-
-  useEffect(() => {
-    fetchAllData();
-    
-    // 전역 저장 이벤트 리스너 등록
-    const handleRefresh = () => fetchAllData();
-    window.addEventListener('record-saved', handleRefresh);
-    return () => window.removeEventListener('record-saved', handleRefresh);
-  }, [fetchAllData]);
+  const loading = dataLoading || glucoseLoading;
 
   const now = new Date();
   const getGreeting = () => {

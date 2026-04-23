@@ -10,32 +10,31 @@ import {
 import type { GlucoseReading, GlucoseChartData } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
+import { useHealthData } from '@/context/HealthDataContext';
+
 export function useGlucoseData() {
   const { user } = useAuth();
   const userId = user?.uid || 'guest';
+  const { glucoseReadings: globalReadings, isLoading: globalLoading, refreshData } = useHealthData();
+  
   const [readings, setReadings] = useState<GlucoseReading[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentGlucose, setCurrentGlucose] = useState<number>(0);
 
-  const fetchReadings = useCallback(async (showLoading = true) => {
-    if (showLoading) setIsInitialLoading(true);
-    try {
-      const data = await getGlucoseReadings(userId, 72);
-      setReadings(data);
-      if (data.length > 0) {
-        setCurrentGlucose(data[data.length - 1].value);
-      }
-    } catch (error) {
-      console.error('Failed to fetch glucose readings:', error);
-    } finally {
-      if (showLoading) setIsInitialLoading(false);
-    }
-  }, [userId]);
-
+  // 컨텍스트 데이터와 로컬 상태 동기화
   useEffect(() => {
-    fetchReadings();
-  }, [fetchReadings]);
+    if (globalReadings.length > 0) {
+      setReadings(globalReadings);
+      setCurrentGlucose(globalReadings[globalReadings.length - 1].value);
+    }
+    setIsInitialLoading(globalLoading);
+  }, [globalReadings, globalLoading]);
+
+  const fetchReadings = useCallback(async (showLoading = true) => {
+    // 이미 globalLoading이 처리 중이면 중복 호출 방지 또는 배경 업데이트
+    await refreshData();
+  }, [refreshData]);
 
   const addReading = useCallback(async (value: number, type: GlucoseReading['measurementType'], timestamp: Date = new Date(), linkedMealId?: string) => {
     setIsSubmitting(true);
