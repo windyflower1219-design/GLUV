@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, Zap, Users, Activity, 
   Settings, ChevronRight, Loader2, CheckCircle,
-  AlertCircle, ArrowLeft
+  AlertCircle, ArrowLeft, X
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
