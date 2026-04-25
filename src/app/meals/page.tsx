@@ -8,16 +8,11 @@ import {
 import PageHeader from '@/components/common/PageHeader';
 import { predictGlucoseResponse } from '@/lib/algorithms/glucoseAnalysis';
 import { calculateMealImpact } from '@/lib/algorithms/mealAnalysis';
-import { 
-  getMeals, saveMeal, deleteMeal, updateMeal, getGlucoseReadings,
-  getUserProfile, UserProfile
-} from '@/lib/firebase/firestore';
+import { getMeals, deleteMeal, updateMeal } from '@/lib/firebase/firestore';
 import { useVoiceInputContext } from '@/context/VoiceInputContext';
-import { useUnifiedStorage } from '@/lib/hooks/useUnifiedStorage';
 import { useBackHandler } from '@/context/BackHandlerContext';
-import type { FoodItem, Meal, MealType, MeasurementType, GlucoseReading } from '@/types';
+import type { FoodItem, Meal, MealType, GlucoseReading } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-
 import { useHealthData } from '@/context/HealthDataContext';
 
 const MEAL_TYPE_LABELS: Record<MealType, { label: string; emoji: string; color: string; bg: string }> = {
@@ -27,21 +22,14 @@ const MEAL_TYPE_LABELS: Record<MealType, { label: string; emoji: string; color: 
   snack: { label: '간식', emoji: '🍎', color: 'text-[var(--color-accent)]', bg: 'bg-[#FFF0F3]' },
 };
 
-function getMealType(): MealType {
-  const h = new Date().getHours();
-  if (h >= 6 && h < 10) return 'breakfast';
-  if (h >= 10 && h < 15) return 'lunch';
-  if (h >= 15 && h < 19) return 'dinner';
-  return 'snack';
-}
-
 export default function MealsPage() {
-  const { 
-    meals: globalMeals, 
-    glucoseReadings: globalGlucose, 
-    userProfile, 
+  const {
+    meals: globalMeals,        // 오늘(컨텍스트 기준 날짜) 식단
+    recentMeals,               // 최근 30일 식단 (히스토리 분석용)
+    glucoseReadings: globalGlucose,
+    userProfile,
     isLoading: dataLoading,
-    refreshData 
+    refreshData,
   } = useHealthData();
 
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -49,10 +37,9 @@ export default function MealsPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
-  
+
   const { openVoiceInput } = useVoiceInputContext();
   const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
-  const [allRecentMeals, setAllRecentMeals] = useState<Meal[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const startEditing = (meal: Meal) => {
@@ -60,7 +47,7 @@ export default function MealsPage() {
     setEditingId(meal.id);
     setDeletingId(null);
   };
-  
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<FoodItem[]>([]);
@@ -92,13 +79,7 @@ export default function MealsPage() {
     setMeals((cur) =>
       cur.map((m) =>
         m.id === meal.id
-          ? {
-              ...m,
-              parsedFoods: foods,
-              totalCarbs,
-              totalCalories,
-              glucotypeScore: prediction.riskLevel,
-            }
+          ? { ...m, parsedFoods: foods, totalCarbs, totalCalories, glucotypeScore: prediction.riskLevel }
           : m,
       ),
     );
@@ -107,14 +88,8 @@ export default function MealsPage() {
     setIsSavingEdit(true);
 
     try {
-      await updateMeal(meal.id, {
-        parsedFoods: foods,
-        totalCarbs,
-        totalCalories,
-        glucotypeScore: prediction.riskLevel,
-      });
-      refreshData();
-      window.dispatchEvent(new CustomEvent('record-saved'));
+      await updateMeal(meal.id, { parsedFoods: foods, totalCarbs, totalCalories, glucotypeScore: prediction.riskLevel });
+      refreshData(selectedDate);
     } catch (err: any) {
       console.error('수정 실패, 롤백:', err);
       setMeals(prev);
@@ -126,15 +101,16 @@ export default function MealsPage() {
 
   const { user } = useAuth();
 
-  // 컨텍스트 데이터 동기화
+  // 선택 날짜에 맞는 식단 로드
   useEffect(() => {
-    // 오늘 날짜인 경우 컨텍스트 데이터 사용
-    if (selectedDate.toDateString() === new Date().toDateString()) {
+    const today = new Date();
+    if (selectedDate.toDateString() === today.toDateString()) {
+      // 오늘: 컨텍스트의 오늘치 식단 사용 (이미 날짜 필터 완료)
       setMeals(globalMeals);
       setGlucoseReadings(globalGlucose);
       setIsInitialLoading(dataLoading);
     } else {
-      // 다른 날짜인 경우 별도 로드
+      // 다른 날짜: Firebase에서 직접 조회
       const fetchSpecificDate = async () => {
         setIsInitialLoading(true);
         try {
@@ -150,24 +126,13 @@ export default function MealsPage() {
     }
   }, [selectedDate, globalMeals, globalGlucose, dataLoading, user]);
 
-  // 히스토리 데이터는 배경에서 한 번 로드
-  useEffect(() => {
-    const fetchHistory = async () => {
-      if (user) {
-        const recent = await getMeals(user.uid);
-        setAllRecentMeals(recent);
-      }
-    };
-    fetchHistory();
-  }, [user]);
-
   const handleDelete = async (id: string) => {
     const prev = meals;
     setMeals((cur) => cur.filter((m) => m.id !== id));
     setDeletingId(null);
     try {
       await deleteMeal(id);
-      window.dispatchEvent(new CustomEvent('record-saved'));
+      refreshData(selectedDate);
     } catch (err: any) {
       console.error('삭제 실패, 롤백:', err);
       setMeals(prev);
@@ -175,7 +140,6 @@ export default function MealsPage() {
     }
   };
 
-  // 연산 최적화: 메모이제이션 적용
   const groupedMeals = React.useMemo(() => {
     return meals.reduce<Record<MealType, Meal[]>>((acc, meal) => {
       if (!acc[meal.mealType]) acc[meal.mealType] = [];
@@ -186,12 +150,11 @@ export default function MealsPage() {
 
   const todayCalories = React.useMemo(() => meals.reduce((s, m) => s + m.totalCalories, 0), [meals]);
   const targetKcal = userProfile?.targetKcal || 2000;
-  const kcalPercentage = React.useMemo(() => 
-    Math.min(Math.round((todayCalories / targetKcal) * 100), 100), 
+  const kcalPercentage = React.useMemo(() =>
+    Math.min(Math.round((todayCalories / targetKcal) * 100), 100),
     [todayCalories, targetKcal]
   );
 
-  // 날짜 선택 바용 미리 계산된 날짜 목록
   const dateOffsets = React.useMemo(() => {
     return [-3, -2, -1, 0, 1, 2, 3].map(offset => {
       const d = new Date();
@@ -203,28 +166,26 @@ export default function MealsPage() {
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)] page-content">
       <PageHeader title="식단 기록" />
-      
+
       <div className="px-5 py-3 sticky top-[72px] bg-[var(--color-bg-primary)]/90 backdrop-blur z-10 border-b border-[var(--color-border)]">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {dateOffsets.map(d => {
             const isSelected = selectedDate.toDateString() === d.toDateString();
             const isToday = new Date().toDateString() === d.toDateString();
-            
+
             return (
               <div key={d.toISOString()}
                 onClick={() => setSelectedDate(d)}
                 className={`flex flex-col items-center px-3 py-2 rounded-2xl min-w-[56px] cursor-pointer transition-all ${
-                  isSelected 
-                    ? 'bg-[var(--color-accent)] text-white shadow-lg scale-105' 
+                  isSelected
+                    ? 'bg-[var(--color-accent)] text-white shadow-lg scale-105'
                     : 'bg-white text-gray-500 border border-gray-100'
                 }`}
               >
                 <span className="text-[10px] font-bold opacity-80">
                   {d.toLocaleDateString('ko-KR', { weekday: 'short' })}
                 </span>
-                <span className="text-lg font-extrabold">
-                  {d.getDate()}
-                </span>
+                <span className="text-lg font-extrabold">{d.getDate()}</span>
                 {isToday && !isSelected && <div className="w-1 h-1 rounded-full bg-rose-500 mt-0.5" />}
               </div>
             );
@@ -254,8 +215,6 @@ export default function MealsPage() {
           </div>
         </div>
 
-        {/* 입력 섹션 삭제 - 전역 버튼과 중복됨 */}
-
         <div className="space-y-6 pb-4">
           {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(type => {
             const typeMeals = groupedMeals[type] || [];
@@ -267,7 +226,7 @@ export default function MealsPage() {
                     <span className={`w-8 h-8 rounded-xl ${config.bg} flex items-center justify-center text-lg shadow-sm border border-white`}>
                       {config.emoji}
                     </span>
-                    <h2 className={`font-black text-sm text-[var(--color-text-primary)]`}>{config.label}</h2>
+                    <h2 className="font-black text-sm text-[var(--color-text-primary)]">{config.label}</h2>
                   </div>
                   {typeMeals.length > 0 && (
                     <span className="text-[10px] font-bold text-[var(--color-text-secondary)] bg-white px-2 py-1 rounded-lg border border-[var(--color-border)]">
@@ -339,64 +298,28 @@ export default function MealsPage() {
                                   <div className="grid grid-cols-4 gap-2">
                                     <label className="flex flex-col gap-1">
                                       <span className="text-[9px] font-black text-gray-400">수량</span>
-                                      <input
-                                        type="number"
-                                        value={f.quantity}
-                                        onChange={(e) => updateDraftField(i, 'quantity', e.target.value)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300"
-                                        min={0}
-                                      />
+                                      <input type="number" value={f.quantity} onChange={(e) => updateDraftField(i, 'quantity', e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300" min={0} />
                                     </label>
                                     <label className="flex flex-col gap-1">
                                       <span className="text-[9px] font-black text-gray-400">단위</span>
-                                      <input
-                                        type="text"
-                                        value={f.unit}
-                                        onChange={(e) => updateDraftField(i, 'unit', e.target.value)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300"
-                                      />
+                                      <input type="text" value={f.unit} onChange={(e) => updateDraftField(i, 'unit', e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300" />
                                     </label>
                                     <label className="flex flex-col gap-1">
                                       <span className="text-[9px] font-black text-gray-400">kcal</span>
-                                      <input
-                                        type="number"
-                                        value={f.calories}
-                                        onChange={(e) => updateDraftField(i, 'calories', e.target.value)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300"
-                                        min={0}
-                                      />
+                                      <input type="number" value={f.calories} onChange={(e) => updateDraftField(i, 'calories', e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300" min={0} />
                                     </label>
                                     <label className="flex flex-col gap-1">
                                       <span className="text-[9px] font-black text-gray-400">탄수(g)</span>
-                                      <input
-                                        type="number"
-                                        value={f.carbs}
-                                        onChange={(e) => updateDraftField(i, 'carbs', e.target.value)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300"
-                                        min={0}
-                                      />
+                                      <input type="number" value={f.carbs} onChange={(e) => updateDraftField(i, 'carbs', e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300" min={0} />
                                     </label>
                                   </div>
                                 </div>
                               ))}
-
                               <div className="flex gap-2 justify-end pt-1">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); cancelEditing(); }}
-                                  disabled={isSavingEdit}
-                                  className="flex items-center gap-1 text-[11px] font-black text-gray-500 bg-gray-100 px-3 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-50"
-                                >
+                                <button onClick={(e) => { e.stopPropagation(); cancelEditing(); }} disabled={isSavingEdit} className="flex items-center gap-1 text-[11px] font-black text-gray-500 bg-gray-100 px-3 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-50">
                                   <X size={12} /> 취소
                                 </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); saveEdit(meal); }}
-                                  disabled={isSavingEdit}
-                                  className="flex items-center gap-1 text-[11px] font-black text-white bg-indigo-500 px-3 py-2 rounded-xl active:scale-95 transition-all shadow-sm shadow-indigo-100 disabled:opacity-50"
-                                >
+                                <button onClick={(e) => { e.stopPropagation(); saveEdit(meal); }} disabled={isSavingEdit} className="flex items-center gap-1 text-[11px] font-black text-white bg-indigo-500 px-3 py-2 rounded-xl active:scale-95 transition-all shadow-sm shadow-indigo-100 disabled:opacity-50">
                                   {isSavingEdit ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                                   저장
                                 </button>
@@ -420,23 +343,20 @@ export default function MealsPage() {
                             </div>
                           )}
 
-                          {/* 혈당 영향 패널 */}
                           {editingId !== meal.id && (
                             <div className="mt-2 space-y-4 animate-fade-in">
                               {(() => {
                                 const impact = calculateMealImpact(meal, glucoseReadings);
-                                
-                                // 히스토리 계산: 동일 음식이 포함된 과거 기록 찾기
+
+                                // 히스토리: recentMeals(컨텍스트 30일)에서 동일 음식 포함 기록 검색
                                 const currentFoodNames = meal.parsedFoods.map(f => f.name);
-                                const historyMatches = allRecentMeals.filter(m => 
-                                  m.id !== meal.id && 
+                                const historyMatches = recentMeals.filter(m =>
+                                  m.id !== meal.id &&
                                   m.parsedFoods.some(f => currentFoodNames.includes(f.name))
                                 );
-                                
                                 const historyImpacts = historyMatches
                                   .map(m => calculateMealImpact(m, glucoseReadings))
                                   .filter(imp => imp.status === 'complete');
-                                
                                 const avgHistoryDelta = historyImpacts.length > 0
                                   ? Math.round(historyImpacts.reduce((s, i) => s + i.deltaBG, 0) / historyImpacts.length)
                                   : null;
@@ -456,14 +376,13 @@ export default function MealsPage() {
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
                                           <Activity size={12} className="text-rose-400" /> 혈당 영향 패널
                                         </p>
-                                        <button 
+                                        <button
                                           onClick={(e) => { e.stopPropagation(); setShowGuide(true); }}
                                           className="p-1 hover:bg-gray-100 rounded-full transition-colors"
                                         >
                                           <HelpCircle size={14} className="text-gray-300 hover:text-rose-400" />
                                         </button>
                                       </div>
-                                      
                                       <div className="flex items-center justify-between mb-6">
                                         <div>
                                           <p className={`text-3xl font-black ${impact.deltaBG > 40 ? 'text-rose-500' : 'text-emerald-500'}`}>
@@ -476,7 +395,6 @@ export default function MealsPage() {
                                           {impact.deltaBG > 40 ? '🧨' : '🥗'}
                                         </div>
                                       </div>
-
                                       <div className="grid grid-cols-3 gap-3">
                                         <div className="bg-white p-3 rounded-2xl border border-gray-50 shadow-sm text-center">
                                           <p className="text-[10px] font-bold text-gray-400 mb-1">피크</p>
@@ -493,7 +411,6 @@ export default function MealsPage() {
                                       </div>
                                     </div>
 
-                                    {/* 히스토리 칩 */}
                                     {avgHistoryDelta !== null && (
                                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-500 rounded-2xl border border-indigo-100 animate-slide-up">
                                         <Sparkles size={12} className="animate-pulse" />
@@ -506,42 +423,18 @@ export default function MealsPage() {
                                 );
                               })()}
 
-                              {/* 액션 버튼들 */}
                               {deletingId === meal.id ? (
                                 <div className="self-end flex items-center gap-2 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2 animate-fade-in">
                                   <p className="text-xs font-bold text-rose-500">정말 삭제할까요?</p>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); handleDelete(meal.id); }}
-                                    className="text-[10px] font-black text-white bg-rose-400 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
-                                  >
-                                    삭제
-                                  </button>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setDeletingId(null); }}
-                                    className="text-[10px] font-black text-gray-500 bg-gray-100 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
-                                  >
-                                    취소
-                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleDelete(meal.id); }} className="text-[10px] font-black text-white bg-rose-400 px-3 py-1.5 rounded-xl active:scale-95 transition-all">삭제</button>
+                                  <button onClick={(e) => { e.stopPropagation(); setDeletingId(null); }} className="text-[10px] font-black text-gray-500 bg-gray-100 px-3 py-1.5 rounded-xl active:scale-95 transition-all">취소</button>
                                 </div>
                               ) : (
                                 <div className="self-end flex items-center gap-1">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); startEditing(meal); }}
-                                    className="p-2 text-indigo-300 hover:text-indigo-500 transition-colors"
-                                    aria-label="수정"
-                                    title="수정"
-                                  >
+                                  <button onClick={(e) => { e.stopPropagation(); startEditing(meal); }} className="p-2 text-indigo-300 hover:text-indigo-500 transition-colors" aria-label="수정">
                                     <Pencil size={16} />
                                   </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDeletingId(meal.id);
-                                    }}
-                                    className="p-2 text-rose-300 hover:text-rose-500 transition-colors"
-                                    aria-label="삭제"
-                                    title="삭제"
-                                  >
+                                  <button onClick={(e) => { e.stopPropagation(); setDeletingId(meal.id); }} className="p-2 text-rose-300 hover:text-rose-500 transition-colors" aria-label="삭제">
                                     <Trash2 size={16} />
                                   </button>
                                 </div>
@@ -558,13 +451,13 @@ export default function MealsPage() {
           })}
         </div>
       </div>
-      {/* 지표 가이드 모달 */}
+
       {showGuide && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animate-fade-in"
           onClick={() => setShowGuide(false)}
         >
-          <div 
+          <div
             className="bg-white rounded-[40px] p-8 max-w-sm w-full shadow-2xl space-y-6 animate-scale-in"
             onClick={e => e.stopPropagation()}
           >
@@ -579,7 +472,6 @@ export default function MealsPage() {
                 <X size={18} />
               </button>
             </div>
-
             <div className="space-y-5">
               <div className="space-y-1">
                 <p className="text-xs font-black text-emerald-500">ΔBG (혈당 스파이크)</p>
@@ -587,35 +479,26 @@ export default function MealsPage() {
                   식사 전 혈당 대비 얼마나 높게 올랐는지를 보여줍니다. 보통 <span className="text-rose-400">+30 mg/dL 미만</span>으로 유지하는 것이 혈관 건강에 좋습니다.
                 </p>
               </div>
-
               <div className="space-y-1">
                 <p className="text-xs font-black text-orange-500">피크 시간</p>
                 <p className="text-[11px] font-bold text-gray-500 leading-relaxed">
                   음식물이 소화되어 혈당이 가장 높게 치솟는 시점입니다. 정제 탄수화물이나 액상과당이 많을수록 이 시간이 빨라지고 수치가 높아집니다.
                 </p>
               </div>
-
               <div className="space-y-1">
                 <p className="text-xs font-black text-indigo-500">식후 2시간 혈당</p>
                 <p className="text-[11px] font-bold text-gray-500 leading-relaxed">
                   우리 몸의 인슐린이 혈당을 얼마나 효과적으로 다시 낮추는지 보여주는 대사 능력의 척도입니다. 당뇨 관리의 핵심 지표입니다.
                 </p>
               </div>
-
               <div className="bg-amber-50 p-4 rounded-3xl border border-amber-100 mt-2">
-                <p className="text-[10px] font-black text-amber-600 mb-1 flex items-center gap-1">
-                  💡 건강 관리 Tip
-                </p>
+                <p className="text-[10px] font-black text-amber-600 mb-1 flex items-center gap-1">💡 건강 관리 Tip</p>
                 <p className="text-[10px] font-bold text-amber-700/80 leading-relaxed">
-                  혈당이 급격히 오를 때는 식사 순서를 <span className="underline decoration-amber-300">채소 → 단백질 → 탄수화물</span> 순으로 바꿔보세요! 상승폭이 훨씬 완만해집니다.
+                  혈당이 급격히 오를 때는 식사 순서를 <span className="underline decoration-amber-300">채소 → 단백질 → 탄수화물</span> 순으로 바꿔보세요!
                 </p>
               </div>
             </div>
-
-            <button 
-              onClick={() => setShowGuide(false)}
-              className="w-full py-4 bg-indigo-600 text-white rounded-3xl font-black text-sm shadow-xl shadow-indigo-100"
-            >
+            <button onClick={() => setShowGuide(false)} className="w-full py-4 bg-indigo-600 text-white rounded-3xl font-black text-sm shadow-xl shadow-indigo-100">
               확인했습니다
             </button>
           </div>

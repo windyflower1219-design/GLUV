@@ -1,20 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Plus, Activity, Target, Heart,
-  Calendar, ChevronRight, Loader2, Clock,
-  Pencil, Trash2, Check, X
-} from '@/components/common/Icons';
+import React, { useState } from 'react';
+import { X } from '@/components/common/Icons';
 import PageHeader from '@/components/common/PageHeader';
-import StatCard from '@/components/common/StatCard';
 import { useGlucoseData } from '@/lib/hooks/useGlucoseData';
-import { analyzeWeeklyTrend } from '@/lib/algorithms/glucoseAnalysis';
-import { useBackHandler } from '@/context/BackHandlerContext';
 import type { GlucoseReading } from '@/types';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine 
+  ResponsiveContainer,
 } from 'recharts';
 
 interface TooltipProps {
@@ -55,15 +48,11 @@ export default function GlucosePage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newGlucoseValue, setNewGlucoseValue] = useState('');
   const [newMeasType, setNewMeasType] = useState<GlucoseReading['measurementType']>('random');
-  const [selectedTime, setSelectedTime] = useState<string>(() => {
-    const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-    return (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
-  });
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const {
-    readings, loading, isSubmitting, currentGlucose, averageGlucose, timeInRange,
-    addReading, editReading, removeReading, getChartData,
+    readings, isSubmitting, averageGlucose, timeInRange,
+    addReading,
   } = useGlucoseData();
 
   const dateOffsets = React.useMemo(() => {
@@ -102,15 +91,15 @@ export default function GlucosePage() {
     } else {
       const daysCount = period === 'week' ? 7 : 30;
       const dailyMap = new Map<string, { sum: number, count: number, timestamp: number }>();
-      
+
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - daysCount);
 
       readings.filter(r => r.timestamp >= cutoff).forEach(r => {
         const dateStr = r.timestamp.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
         const existing = dailyMap.get(dateStr) || { sum: 0, count: 0, timestamp: r.timestamp.getTime() };
-        dailyMap.set(dateStr, { 
-          sum: existing.sum + r.value, 
+        dailyMap.set(dateStr, {
+          sum: existing.sum + r.value,
           count: existing.count + 1,
           timestamp: Math.min(existing.timestamp, r.timestamp.getTime())
         });
@@ -125,21 +114,13 @@ export default function GlucosePage() {
     }
   }, [readings, filteredReadings, period]);
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  const startEdit = (reading: GlucoseReading) => {
-    // 편집 기능을 위한 추가 구현이 필요할 수 있으나 현재는 모달로 연결하거나 단순 선택 처리
-    // 여기서는 일단 편집 모드 진입 대신 클릭 시 기록 선택 정도로 처리하거나 필요 시 editReading 호출
-  };
-
   const handleAddReading = async () => {
     const value = parseInt(newGlucoseValue);
     if (isNaN(value) || value < 20 || value > 600) return;
     try {
-      await addReading(value, newMeasType, new Date(selectedTime));
+      await addReading(value, newMeasType, new Date());
       setNewGlucoseValue('');
       setShowAddModal(false);
-      window.dispatchEvent(new CustomEvent('record-saved'));
     } catch (error: any) {
       alert(`저장에 실패했습니다: ${error.message || error}`);
     }
@@ -156,9 +137,8 @@ export default function GlucosePage() {
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${
-                period === p ? 'bg-[var(--color-accent)] text-white shadow-md' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'
-              }`}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${period === p ? 'bg-[var(--color-accent)] text-white shadow-md' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'
+                }`}
             >
               {p === 'day' ? '일간' : p === 'week' ? '주간' : '월간'}
             </button>
@@ -174,9 +154,8 @@ export default function GlucosePage() {
                 <button
                   key={d.toISOString()}
                   onClick={() => setSelectedDate(d)}
-                  className={`flex flex-col items-center px-4 py-2 rounded-2xl min-w-[60px] transition-all border ${
-                    isSelected ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-lg' : 'bg-white text-[var(--color-text-muted)] border-[var(--color-border)]'
-                  }`}
+                  className={`flex flex-col items-center px-4 py-2 rounded-2xl min-w-[60px] transition-all border ${isSelected ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-lg' : 'bg-white text-[var(--color-text-muted)] border-[var(--color-border)]'
+                    }`}
                 >
                   <span className="text-[9px] font-bold opacity-70 mb-1">{d.toLocaleDateString('ko-KR', { weekday: 'short' })}</span>
                   <span className="text-sm font-black">{d.getDate()}</span>
@@ -191,15 +170,15 @@ export default function GlucosePage() {
           <div className="bg-white p-5 rounded-[32px] border border-gray-50 shadow-sm">
             <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-2">평균 혈당</p>
             <div className="flex items-baseline gap-1">
-               <span className="text-2xl font-black text-[var(--color-text-primary)]">{displayAverage}</span>
-               <span className="text-[10px] font-bold text-gray-400">mg/dL</span>
+              <span className="text-2xl font-black text-[var(--color-text-primary)]">{displayAverage}</span>
+              <span className="text-[10px] font-bold text-gray-400">mg/dL</span>
             </div>
           </div>
           <div className="bg-white p-5 rounded-[32px] border border-gray-100 shadow-sm">
             <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-2">목표 도달</p>
             <div className="flex items-baseline gap-1">
-               <span className="text-2xl font-black text-emerald-500">{displayTimeInRange}</span>
-               <span className="text-[10px] font-bold text-gray-400">%</span>
+              <span className="text-2xl font-black text-emerald-500">{displayTimeInRange}</span>
+              <span className="text-[10px] font-bold text-gray-400">%</span>
             </div>
           </div>
         </div>
@@ -266,48 +245,47 @@ export default function GlucosePage() {
       {showAddModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowAddModal(false)}>
           <div className="modal-sheet bg-white rounded-[40px] p-8 max-w-sm mx-auto shadow-2xl">
-             <div className="flex items-center justify-between mb-8">
-               <h2 className="text-xl font-black text-gray-800">혈당 기록</h2>
-               <button onClick={() => setShowAddModal(false)} className="p-2 bg-gray-50 rounded-full text-gray-400"><X size={20}/></button>
-             </div>
-             
-             <div className="space-y-6">
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={newGlucoseValue}
-                    onChange={e => setNewGlucoseValue(e.target.value)}
-                    placeholder="000"
-                    className="w-full text-5xl font-black text-center py-6 bg-gray-50 rounded-[32px] outline-none text-gray-800 focus:bg-indigo-50/30 transition-colors"
-                  />
-                  <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black text-gray-300">mg/dL</span>
-                </div>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-black text-gray-800">혈당 기록</h2>
+              <button onClick={() => setShowAddModal(false)} className="p-2 bg-gray-50 rounded-full text-gray-400"><X size={20} /></button>
+            </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  {Object.entries(MEASUREMENT_TYPES).map(([key, { label, emoji }]) => (
-                    <button
-                      key={key}
-                      onClick={() => setNewMeasType(key as any)}
-                      className={`py-4 rounded-2xl text-xs font-black transition-all border ${
-                        newMeasType === key ? 'bg-gray-800 text-white border-gray-800 shadow-lg' : 'bg-white text-gray-400 border-gray-100'
-                      }`}
-                    >
-                      {emoji} {label}
-                    </button>
-                  ))}
-                </div>
+            <div className="space-y-6">
+              <div className="relative">
+                <input
+                  type="number"
+                  value={newGlucoseValue}
+                  onChange={e => setNewGlucoseValue(e.target.value)}
+                  placeholder="000"
+                  className="w-full text-5xl font-black text-center py-6 bg-gray-50 rounded-[32px] outline-none text-gray-800 focus:bg-indigo-50/30 transition-colors"
+                />
+                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black text-gray-300">mg/dL</span>
+              </div>
 
-                <div className="flex gap-3 pt-2">
-                  <button onClick={() => setShowAddModal(false)} className="flex-1 bg-gray-100 text-gray-500 py-5 rounded-[32px] font-black text-sm active:scale-95 transition-all">취소</button>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(MEASUREMENT_TYPES).map(([key, { label, emoji }]) => (
                   <button
-                    onClick={handleAddReading}
-                    disabled={!newGlucoseValue || isSubmitting}
-                    className="flex-[2] bg-gray-800 text-white py-5 rounded-[32px] font-black text-sm shadow-xl active:scale-95 transition-all disabled:opacity-20"
+                    key={key}
+                    onClick={() => setNewMeasType(key as any)}
+                    className={`py-4 rounded-2xl text-xs font-black transition-all border ${newMeasType === key ? 'bg-gray-800 text-white border-gray-800 shadow-lg' : 'bg-white text-gray-400 border-gray-100'
+                      }`}
                   >
-                    저장하기
+                    {emoji} {label}
                   </button>
-                </div>
-             </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowAddModal(false)} className="flex-1 bg-gray-100 text-gray-500 py-5 rounded-[32px] font-black text-sm active:scale-95 transition-all">취소</button>
+                <button
+                  onClick={handleAddReading}
+                  disabled={!newGlucoseValue || isSubmitting}
+                  className="flex-[2] bg-gray-800 text-white py-5 rounded-[32px] font-black text-sm shadow-xl active:scale-95 transition-all disabled:opacity-20"
+                >
+                  저장하기
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
