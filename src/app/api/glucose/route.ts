@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
+import { verifyAuth } from '@/lib/auth/verifyAuth';
+import { ensureUserExists, scheduleImpactRecompute } from '@/lib/db/helpers';
 
-// GET /api/glucose?userId=xxx&hours=168  → 최근 N시간 혈당
+// GET /api/glucose?hours=168  → 최근 N시간 혈당
 export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const userId = searchParams.get('userId');
-  const hours = parseInt(searchParams.get('hours') || '24');
+  const auth = await verifyAuth(req);
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const userId = auth.userId;
 
-  if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
+  const hours = parseInt(req.nextUrl.searchParams.get('hours') || '24');
 
   try {
     const cutoff = new Date();
@@ -28,9 +30,17 @@ export async function GET(req: NextRequest) {
 
 // POST /api/glucose  → 혈당 저장, { id } 반환
 export async function POST(req: NextRequest) {
+  let body: any = {};
+  try { body = await req.json(); } catch {}
+  const auth = await verifyAuth(req, { fallbackUserId: body?.userId ?? null });
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const userId = auth.userId;
+
   try {
-    const body = await req.json();
-    const { id, userId, timestamp, value, measurementType, linkedMealId, notes } = body;
+    const { id, timestamp, value, measurementType, linkedMealId, notes } = body || {};
+
+    // FK 무결성: users 행 보장
+    await ensureUserExists(userId);
 
     await sql`
       INSERT INTO glucose_readings (id, user_id, timestamp, value, measurement_type, linked_meal_id, notes)
@@ -44,6 +54,10 @@ export async function POST(req: NextRequest) {
         ${notes ?? null}
       )
     `;
+
+    // 연결된 식사가 있으면 영향 캐시 비동기 갱신
+    if (linkedMealId) scheduleImpactRecompute(userId, linkedMealId);
+
     return NextResponse.json({ id });
   } catch (error: any) {
     console.error('[glucose POST]', error);

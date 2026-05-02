@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { MicIcon, X, Check, Loader2, Sparkles } from '@/components/common/Icons';
 import type { FoodItem, MeasurementType } from '@/types';
+import { apiFetch } from '@/lib/api/client';
 
 interface ParsedResult {
   parsedFoods: FoodItem[];
@@ -49,6 +50,19 @@ const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ onClose, onConfirm, i
   const [parsedResult, setParsedResult] = useState<ParsedResult | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
 
+  // 미리보기에서 인라인 수정용
+  const [editedGlucose, setEditedGlucose] = useState<number | null>(null);
+  const [editedMeasType, setEditedMeasType] = useState<MeasurementType>('random');
+  const [editedFoods, setEditedFoods] = useState<FoodItem[]>([]);
+
+  // preview 진입 시 파싱 결과를 편집 state에 sync
+  useEffect(() => {
+    if (step !== 'preview' || !parsedResult) return;
+    setEditedGlucose(parsedResult.glucoseValue ?? null);
+    setEditedMeasType((parsedResult.detectedMeasType as MeasurementType) || 'random');
+    setEditedFoods(parsedResult.parsedFoods ?? []);
+  }, [step, parsedResult]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -88,7 +102,7 @@ const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ onClose, onConfirm, i
     setStep('parsing');
     setParseError(null);
     try {
-      const res = await fetch('/api/parse-meal', {
+      const res = await apiFetch('/api/parse-meal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ voiceText: transcript }),
@@ -102,20 +116,17 @@ const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ onClose, onConfirm, i
     }
   };
 
-  // Step 3: 실제 저장 — 파싱된 데이터를 부모로 전달
+  // Step 3: 실제 저장 — 인라인 편집된 값을 우선 사용
   const handleSave = () => {
     if (!parsedResult) return;
     const glucose =
-      parsedResult.glucoseValue != null
-        ? {
-            value: parsedResult.glucoseValue,
-            type: (parsedResult.detectedMeasType || 'random') as MeasurementType,
-          }
+      editedGlucose != null && !Number.isNaN(editedGlucose)
+        ? { value: editedGlucose, type: editedMeasType }
         : undefined;
     const timestamp = parsedResult.detectedTime
       ? parseDetectedTime(parsedResult.detectedTime)
       : new Date();
-    onConfirm(parsedResult.parsedFoods ?? [], transcript, glucose, timestamp);
+    onConfirm(editedFoods, transcript, glucose, timestamp);
   };
 
   const handleReRecord = () => {
@@ -125,8 +136,8 @@ const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ onClose, onConfirm, i
     setParseError(null);
   };
 
-  const hasFoods = (parsedResult?.parsedFoods?.length ?? 0) > 0;
-  const hasGlucose = parsedResult?.glucoseValue != null;
+  const hasFoods = (editedFoods?.length ?? 0) > 0;
+  const hasGlucose = editedGlucose != null;
 
   // ── parsing 중 ──────────────────────────────────────────────────────────────
   if (step === 'parsing') {
@@ -167,7 +178,7 @@ const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ onClose, onConfirm, i
               onClick={handleReRecord}
               className="text-xs font-bold text-gray-400 active:scale-95 transition-all"
             >
-              ← 다시 말하기
+              ← 다시 입력하기
             </button>
             <button
               onClick={onClose}
@@ -196,44 +207,98 @@ const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ onClose, onConfirm, i
               {hasFoods && (
                 <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
-                    🍽 식단
+                    🍽 식단 <span className="text-gray-300 font-bold normal-case tracking-normal">· 탭해서 수정</span>
                   </p>
-                  {parsedResult!.parsedFoods.map((food, i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0"
-                    >
-                      <div>
-                        <p className="text-sm font-black text-gray-800">{food.name}</p>
-                        <p className="text-[10px] text-gray-400">
-                          {food.quantity}
-                          {food.unit}
-                        </p>
+                  {editedFoods.map((food, i) => {
+                    const updateFood = (patch: Partial<FoodItem>) => {
+                      setEditedFoods(prev => prev.map((f, j) => j === i ? { ...f, ...patch } : f));
+                    };
+                    return (
+                      <div key={i} className="py-2 border-b border-gray-50 last:border-0">
+                        <div className="flex justify-between items-start mb-1 gap-2">
+                          <div className="flex-1 min-w-0">
+                            <input
+                              type="text"
+                              value={food.name}
+                              onChange={(e) => updateFood({ name: e.target.value })}
+                              className="w-full text-sm font-black text-gray-800 bg-transparent outline-none border-b border-transparent focus:border-gray-200"
+                            />
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={food.quantity}
+                                onChange={(e) => updateFood({ quantity: parseFloat(e.target.value) || 0 })}
+                                className="w-12 text-[10px] text-gray-500 bg-gray-50 rounded px-1 py-0.5 outline-none focus:bg-white focus:ring-1 focus:ring-gray-200"
+                              />
+                              <input
+                                type="text"
+                                value={food.unit}
+                                onChange={(e) => updateFood({ unit: e.target.value })}
+                                className="w-14 text-[10px] text-gray-500 bg-gray-50 rounded px-1 py-0.5 outline-none focus:bg-white focus:ring-1 focus:ring-gray-200"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <input
+                              type="number"
+                              value={food.calories}
+                              onChange={(e) => updateFood({ calories: parseFloat(e.target.value) || 0 })}
+                              className="w-14 text-xs font-black text-gray-600 bg-gray-50 rounded px-1 py-0.5 text-right outline-none focus:bg-white focus:ring-1 focus:ring-gray-200"
+                            />
+                            <span className="text-xs font-black text-gray-600">kcal</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-1">
+                          {(['carbs','protein','fat'] as const).map((k) => (
+                            <label key={k} className="flex items-center gap-1 text-[10px] text-gray-400">
+                              {k === 'carbs' ? '탄수' : k === 'protein' ? '단백' : '지방'}
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={(food as any)[k] ?? 0}
+                                onChange={(e) => updateFood({ [k]: parseFloat(e.target.value) || 0 } as any)}
+                                className="w-12 font-bold text-gray-600 bg-gray-50 rounded px-1 py-0.5 outline-none focus:bg-white focus:ring-1 focus:ring-gray-200"
+                              />g
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs font-black text-gray-600">{food.calories} kcal</p>
-                        <p className="text-[10px] text-gray-400">탄수 {food.carbs}g</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
               {hasGlucose && (
-                <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
-                  <div>
+                <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                      💉 혈당
+                      💉 혈당 <span className="text-gray-300 font-bold normal-case tracking-normal">· 탭해서 수정</span>
                     </p>
-                    <p className="text-sm font-black text-gray-800">
-                      {MEAS_TYPE_LABELS[parsedResult!.detectedMeasType || 'random'] || '임의 측정'}
-                    </p>
+                    <select
+                      value={editedMeasType}
+                      onChange={(e) => setEditedMeasType(e.target.value as MeasurementType)}
+                      className="text-sm font-black text-gray-800 bg-gray-50 rounded-lg px-2 py-1 outline-none focus:bg-white focus:ring-1 focus:ring-gray-200"
+                    >
+                      {Object.entries(MEAS_TYPE_LABELS).map(([v, label]) => (
+                        <option key={v} value={v}>{label}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-black text-[var(--color-accent)]">
-                      {parsedResult!.glucoseValue}
-                    </p>
-                    <p className="text-[10px] font-bold text-gray-400">mg/dL</p>
+                  <div className="text-right shrink-0">
+                    <div className="flex items-baseline justify-end gap-1">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={editedGlucose ?? ''}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setEditedGlucose(v === '' ? null : Math.max(0, Math.min(999, parseInt(v, 10) || 0)));
+                        }}
+                        className="w-20 text-2xl font-black text-[var(--color-accent)] bg-gray-50 rounded-lg px-2 py-1 text-right outline-none focus:bg-white focus:ring-2 focus:ring-[var(--color-accent)]/30"
+                      />
+                    </div>
+                    <p className="text-[10px] font-bold text-gray-400 mt-0.5">mg/dL</p>
                   </div>
                 </div>
               )}
@@ -245,7 +310,7 @@ const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ onClose, onConfirm, i
               onClick={handleReRecord}
               className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-[28px] font-black text-sm active:scale-95 transition-all"
             >
-              다시 말하기
+              다시 입력하기
             </button>
             <button
               onClick={handleSave}
@@ -289,7 +354,7 @@ const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ onClose, onConfirm, i
               {isListening ? 'Listening' : 'Ready'}
             </p>
             <h2 className="text-xl font-black text-[var(--color-text-primary)] leading-tight">
-              식단이나 혈당을 말해보세요
+              식단이나 혈당을 말하거나 입력하세요
             </h2>
           </div>
 
@@ -318,18 +383,14 @@ const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ onClose, onConfirm, i
             </button>
           </div>
 
-          <div className="w-full min-h-[100px] mb-8 p-6 bg-[var(--color-bg-primary)] rounded-[32px] border border-[var(--color-border)] flex items-center justify-center text-center">
-            {transcript ? (
-              <p className="text-sm font-bold text-[var(--color-text-primary)] leading-relaxed italic">
-                "{transcript}"
-              </p>
-            ) : (
-              <p className="text-xs font-bold text-[var(--color-text-muted)]">
-                예: "점심으로 닭가슴살 샐러드 먹었어"
-                <br />
-                또는 "지금 혈당 120 나왔어"
-              </p>
-            )}
+          <div className="w-full mb-8">
+            <textarea
+              value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
+              placeholder={"말하거나 직접 입력하세요\n예: 점심으로 닭가슴살 샐러드 먹었어\n또는: 지금 혈당 120 나왔어"}
+              rows={4}
+              className="w-full p-5 bg-[var(--color-bg-primary)] rounded-[28px] border border-[var(--color-border)] text-sm font-bold text-[var(--color-text-primary)] leading-relaxed resize-none outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-text-muted)] placeholder:font-normal placeholder:text-xs"
+            />
           </div>
 
           {parseError && (

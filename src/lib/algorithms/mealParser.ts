@@ -1,5 +1,6 @@
 // 음식 NLP 파서 (서버사이드 API Route + 로컬 폴백)
 import type { FoodItem, VoiceParseResult, MeasurementType } from '@/types';
+import { apiFetch } from '@/lib/api/client';
 
 // 한국 음식 영양 데이터베이스 (로컬 캐시)
 const KOREAN_FOOD_DB: Record<string, Omit<FoodItem, 'id' | 'quantity'>> = {
@@ -320,7 +321,7 @@ export async function parseMealText(
 ): Promise<VoiceParseResult> {
   // 서버사이드 API Route 호출 (API 키를 클라이언트에 노출하지 않음)
   try {
-    const res = await fetch('/api/parse-meal', {
+    const res = await apiFetch('/api/parse-meal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ voiceText }),

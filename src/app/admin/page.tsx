@@ -9,6 +9,7 @@ import {
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { loadKeywords, saveKeywords, DEFAULT_KEYWORDS, type KeywordEntry } from '@/lib/admin/keywords';
 
 // 관리자 전용 대시보드
 const ADMIN_UID = 'WGlSyhUc5BQ0hiUfiZFq3sC1Cur1';
@@ -37,12 +38,11 @@ export default function AdminPage() {
     targetProtein: 60
   });
 
-  // 키워드 설정 상태
-  const [keywords, setKeywords] = useState([
-    { nutrient: '단백질', query: '닭가슴살 샐러드' },
-    { nutrient: '식이섬유', query: '양배추 환' },
-    { nutrient: '저당간식', query: '스테비아 토마토' }
-  ]);
+  // 쇼핑 연동 키워드 — localStorage 기반 공유 (insights 페이지가 같은 모듈을 읽음)
+  const [keywords, setKeywords] = useState<KeywordEntry[]>(DEFAULT_KEYWORDS);
+  useEffect(() => {
+    setKeywords(loadKeywords());
+  }, []);
 
   if (!isAdmin && user) {
     return (
@@ -228,22 +228,36 @@ export default function AdminPage() {
 
               {activeMenu === 'keywords' && (
                 <div className="space-y-4">
-                  <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase px-1">영양소별 추천 검색어</p>
+                  <div className="flex items-start justify-between px-1">
+                    <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase">영양소별 쇼핑 검색어</p>
+                    <button
+                      onClick={() => setKeywords(DEFAULT_KEYWORDS)}
+                      className="text-[10px] font-black text-[var(--color-accent)] underline"
+                    >
+                      기본값으로 되돌리기
+                    </button>
+                  </div>
+                  <p className="text-[10px] font-bold text-[var(--color-text-muted)] leading-relaxed px-1">
+                    여기서 바꾼 검색어가 인사이트 페이지의 쿠팡·컬리 버튼으로 그대로 연결됩니다.
+                    공백으로 단어를 구분하면 더 정확한 결과가 나와요.
+                  </p>
                   <div className="space-y-3">
                     {keywords.map((kw, i) => (
-                      <div key={i} className="flex gap-2">
-                        <div className="w-20 p-3 bg-[var(--color-primary-soft)] rounded-xl text-[10px] font-black text-[var(--color-accent)] text-center">
-                          {kw.nutrient}
+                      <div key={kw.key} className="flex gap-2 items-center">
+                        <div className="w-24 px-2 py-3 bg-[var(--color-primary-soft)] rounded-xl text-[10px] font-black text-[var(--color-accent)] text-center flex items-center justify-center gap-1 shrink-0">
+                          <span>{kw.emoji}</span>
+                          <span>{kw.label}</span>
                         </div>
-                        <input 
+                        <input
                           type="text"
                           value={kw.query}
+                          placeholder="검색어 입력"
                           onChange={(e) => {
                             const newKws = [...keywords];
-                            newKws[i].query = e.target.value;
+                            newKws[i] = { ...newKws[i], query: e.target.value };
                             setKeywords(newKws);
                           }}
-                          className="flex-1 bg-white border border-[var(--color-border)] rounded-xl py-2 px-3 text-xs font-bold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)] transition-all"
+                          className="flex-1 min-w-0 bg-white border border-[var(--color-border)] rounded-xl py-2 px-3 text-xs font-bold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)] transition-all"
                         />
                       </div>
                     ))}
@@ -253,7 +267,12 @@ export default function AdminPage() {
 
               <button
                 onClick={() => {
-                  alert('설정이 저장되었습니다! 🌸');
+                  if (activeMenu === 'keywords') {
+                    saveKeywords(keywords);
+                    alert('쇼핑 키워드가 저장되었습니다! 인사이트 페이지에 즉시 반영됩니다 🌸');
+                  } else {
+                    alert('설정이 저장되었습니다! 🌸');
+                  }
                   setActiveMenu(null);
                 }}
                 className="w-full bg-[var(--color-accent)] text-white py-4 rounded-[32px] font-black text-sm shadow-xl shadow-[var(--color-accent)]/20 active:scale-95 transition-all mt-4"

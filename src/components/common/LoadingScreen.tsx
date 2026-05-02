@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles } from './Icons';
+import Image from 'next/image';
 
 interface LoadingScreenProps {
   isVisible: boolean;
@@ -28,10 +28,8 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ isVisible }) => {
           <div className="absolute inset-0 bg-[var(--color-accent)] rounded-full animate-ping opacity-10 scale-[2]" style={{ animationDelay: '300ms' }} />
           
           {/* 중앙 로고 아이콘 */}
-          <div className="w-24 h-24 bg-white rounded-[32px] shadow-2xl flex items-center justify-center relative z-20 animate-logo-float border-2 border-[var(--color-border)]">
-            <div className="text-[var(--color-accent)]">
-              <Sparkles size={48} />
-            </div>
+          <div className="w-24 h-24 rounded-[32px] shadow-2xl relative z-20 animate-logo-float overflow-hidden">
+            <Image src="/icons/icon-192x192.png" alt="GLUV" width={96} height={96} className="w-full h-full object-cover" priority />
           </div>
         </div>
 

@@ -4,6 +4,7 @@
 // =====================================================================
 
 import type { Meal, GlucoseReading, ParseCorrection } from '@/types';
+import { apiFetch } from '@/lib/api/client';
 
 // =====================
 // In-memory 읽기 캐시 (30초 TTL)
@@ -71,7 +72,7 @@ function rowToGlucose(row: any): GlucoseReading {
 // =====================
 export const saveMeal = async (meal: Omit<Meal, 'id'>): Promise<string> => {
   const id = genId('meal');
-  const res = await fetch('/api/meals', {
+  const res = await apiFetch('/api/meals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -106,7 +107,7 @@ export const getMeals = async (userId: string, date?: Date): Promise<Meal[]> => 
     } else {
       params.set('days', '30');
     }
-    const res = await fetch(`/api/meals?${params}`);
+    const res = await apiFetch(`/api/meals?${params}`);
     const rows: any[] = await res.json();
     const result = Array.isArray(rows) ? rows.map(rowToMeal) : [];
     setCache(cacheK, result);
@@ -118,7 +119,7 @@ export const getMeals = async (userId: string, date?: Date): Promise<Meal[]> => 
 };
 
 export const deleteMeal = async (mealId: string): Promise<void> => {
-  const res = await fetch(`/api/meals/${mealId}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/meals/${mealId}`, { method: 'DELETE' });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || '식단 삭제 실패');
@@ -134,7 +135,7 @@ export const updateMeal = async (mealId: string, updates: Partial<Omit<Meal, 'id
   if (updates.glucotypeScore !== undefined) payload.glucotypeScore = updates.glucotypeScore;
   if (updates.timestamp instanceof Date) payload.timestamp = updates.timestamp.toISOString();
 
-  const res = await fetch(`/api/meals/${mealId}`, {
+  const res = await apiFetch(`/api/meals/${mealId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -151,7 +152,7 @@ export const updateMeal = async (mealId: string, updates: Partial<Omit<Meal, 'id
 // =====================
 export const saveGlucose = async (reading: Omit<GlucoseReading, 'id'>): Promise<string> => {
   const id = genId('glucose');
-  const res = await fetch('/api/glucose', {
+  const res = await apiFetch('/api/glucose', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -180,7 +181,7 @@ export const getGlucoseReadings = async (userId: string, hours: number = 24): Pr
 
   try {
     const params = new URLSearchParams({ userId, hours: String(bucket) });
-    const res = await fetch(`/api/glucose?${params}`);
+    const res = await apiFetch(`/api/glucose?${params}`);
     const rows: any[] = await res.json();
     const result = Array.isArray(rows) ? rows.map(rowToGlucose) : [];
     setCache(cacheK, result);
@@ -192,7 +193,7 @@ export const getGlucoseReadings = async (userId: string, hours: number = 24): Pr
 };
 
 export const deleteGlucose = async (readingId: string): Promise<void> => {
-  const res = await fetch(`/api/glucose/${readingId}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/glucose/${readingId}`, { method: 'DELETE' });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || '혈당 삭제 실패');
@@ -207,7 +208,7 @@ export const updateGlucose = async (readingId: string, updates: Partial<Omit<Glu
   if (updates.timestamp instanceof Date) payload.timestamp = updates.timestamp.toISOString();
   if (updates.notes !== undefined) payload.notes = updates.notes;
 
-  const res = await fetch(`/api/glucose/${readingId}`, {
+  const res = await apiFetch(`/api/glucose/${readingId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -226,7 +227,7 @@ export const saveParseCorrection = async (correction: Omit<ParseCorrection, 'id'
   if (!correction.rawVoiceInput?.trim()) return null;
   try {
     const id = genId('pc');
-    await fetch('/api/parse-corrections', {
+    await apiFetch('/api/parse-corrections', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, ...correction, timestamp: correction.timestamp.toISOString() }),
@@ -259,7 +260,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile> => {
   if (cached) return cached;
 
   try {
-    const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`);
+    const res = await apiFetch(`/api/profile?userId=${encodeURIComponent(userId)}`);
     const data = await res.json();
     const profile: UserProfile = {
       targetKcal: data.targetKcal ?? DEFAULT_PROFILE.targetKcal,
@@ -275,7 +276,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile> => {
 };
 
 export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>): Promise<void> => {
-  const res = await fetch('/api/profile', {
+  const res = await apiFetch('/api/profile', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, ...updates }),
