@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
 import { verifyAuth } from '@/lib/auth/verifyAuth';
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 async function resolveId(ctx: Ctx) {
-  const p = await Promise.resolve(ctx.params as any);
-  return p.id as string;
+  const p = await ctx.params;
+  return p.id;
 }
 
 // PATCH /api/glucose/[id] — 본인 row만 수정

@@ -3,11 +3,11 @@ import sql from '@/lib/db/client';
 import { verifyAuth } from '@/lib/auth/verifyAuth';
 import { sumNutrients, scheduleImpactRecompute } from '@/lib/db/helpers';
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 async function resolveId(ctx: Ctx) {
-  const p = await Promise.resolve(ctx.params as any);
-  return p.id as string;
+  const p = await ctx.params;
+  return p.id;
 }
 
 // PATCH /api/meals/[id]  → 식단 수정 (본인만)
