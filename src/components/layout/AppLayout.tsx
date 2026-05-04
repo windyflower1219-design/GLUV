@@ -33,11 +33,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { saveUnifiedRecord } = useUnifiedStorage();
 
   // 최소 스플래시 시간 (브랜드 감성)
+  // userId 유무와 무관하게 항상 타이머를 돌려야 비로그인 사용자도 로그인 화면으로 넘어갈 수 있다.
+  // 실제 가시성은 isInitialLoading = showLoading || authLoading 으로 제어됨.
   useEffect(() => {
-    if (!userId) return;
     const timer = setTimeout(() => setShowLoading(false), 3500);
     return () => clearTimeout(timer);
-  }, [userId]);
+  }, []);
 
   // 설정 탭 전환 시 로딩 효과
   useEffect(() => {
