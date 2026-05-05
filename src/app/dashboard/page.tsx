@@ -151,8 +151,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="h-48 min-w-0 mb-6">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="min-w-0 mb-6">
+            <ResponsiveContainer width="100%" height={192}>
               <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
                 <defs>
                   <linearGradient id="glucoseGrad" x1="0" y1="0" x2="0" y2="1">
