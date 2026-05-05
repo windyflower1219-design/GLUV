@@ -25,8 +25,8 @@ export async function GET() {
         results.listModelsError = listErr.message;
       }
 
-      // 2. 직접 호출 테스트
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }, { apiVersion: 'v1' });
+      // 2. 직접 호출 테스트 (실제 사용 모델과 일치: parse-meal/insights는 gemma-3-27b-it 사용)
+      const model = genAI.getGenerativeModel({ model: 'gemma-3-27b-it' }, { apiVersion: 'v1beta' });
       const testResult = await model.generateContent('Say "OK"');
       results.geminiTest = 'SUCCESS: ' + testResult.response.text().trim();
     } catch (err: any) {

@@ -191,8 +191,8 @@ export default function GlucosePage() {
               {period === 'day' ? '시간별' : '일별 평균'}
             </span>
           </div>
-          <div className="h-48 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="w-full">
+            <ResponsiveContainer width="100%" height={192}>
               <AreaChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -30 }}>
                 <defs>
                   <linearGradient id="gGrad" x1="0" y1="0" x2="0" y2="1">
