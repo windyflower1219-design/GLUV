@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -f .env.local ] || cp ../../../.env.local .env.local 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
