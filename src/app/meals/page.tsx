@@ -57,16 +57,43 @@ export default function MealsPage() {
     setEditDraft([]);
   };
 
+  // 수량(quantity)은 그대로 base 값에 저장한다.
+  // 영양 수치(calories/carbs/protein/fat/sodium)는 "단위 기준(per-1-quantity) base" 모델을 유지하고,
+  // UI에는 base × quantity 로 계산된 표시값을 보여준다.
+  // 이렇게 하면 1인분 → 0.5인분으로 수량을 바꾸기만 해도 표시되는 칼로리/탄단지가 자동으로 절반이 된다.
+  const NUTRIENT_FIELDS: ReadonlyArray<keyof FoodItem> = ['calories', 'carbs', 'protein', 'fat', 'sodium'];
+
+  const draftDisplayValue = (food: FoodItem, field: keyof FoodItem): number => {
+    const base = Number((food as any)[field]) || 0;
+    const qty = Number(food.quantity) || 0;
+    const v = base * qty;
+    return field === 'calories' || field === 'sodium' ? Math.round(v) : Math.round(v * 10) / 10;
+  };
+
   const updateDraftField = (idx: number, field: keyof FoodItem, value: string) => {
     setEditDraft(prev => {
       const next = [...prev];
       const numericFields: (keyof FoodItem)[] = ['quantity', 'carbs', 'calories', 'glycemicIndex', 'protein', 'fat', 'sodium'];
+
+      // 영양 수치 input은 표시값(base × qty) 기준으로 입력받으므로, 저장 시 base = displayed / qty 로 역산한다.
+      if (NUTRIENT_FIELDS.includes(field)) {
+        const displayed = value === '' ? 0 : Number(value);
+        const qty = Number(next[idx].quantity) || 1;
+        const newBase = qty > 0 ? displayed / qty : displayed;
+        next[idx] = { ...next[idx], [field]: newBase };
+        return next;
+      }
+
       const parsed: any = numericFields.includes(field)
         ? (value === '' ? 0 : Number(value))
         : value;
       next[idx] = { ...next[idx], [field]: parsed };
       return next;
     });
+  };
+
+  const removeDraftItem = (idx: number) => {
+    setEditDraft(prev => prev.filter((_, j) => j !== idx));
   };
 
   const saveEdit = async (meal: Meal) => {
@@ -287,18 +314,27 @@ export default function MealsPage() {
                             <div className="space-y-2">
                               {editDraft.map((f, i) => (
                                 <div key={i} className="p-3 rounded-2xl border border-indigo-100 bg-indigo-50/30 space-y-2">
-                                  <input
-                                    type="text"
-                                    value={f.name}
-                                    onChange={(e) => updateDraftField(i, 'name', e.target.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-full bg-white border border-gray-100 rounded-xl px-3 py-2 text-xs font-black text-gray-700 outline-none focus:border-indigo-300"
-                                    placeholder="음식 이름"
-                                  />
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      value={f.name}
+                                      onChange={(e) => updateDraftField(i, 'name', e.target.value)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="flex-1 bg-white border border-gray-100 rounded-xl px-3 py-2 text-xs font-black text-gray-700 outline-none focus:border-indigo-300"
+                                      placeholder="음식 이름"
+                                    />
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); removeDraftItem(i); }}
+                                      aria-label="이 항목 삭제"
+                                      className="w-9 h-9 rounded-xl bg-rose-50 text-rose-400 flex items-center justify-center active:scale-90 hover:bg-rose-100 hover:text-rose-500 transition-all"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
                                   <div className="grid grid-cols-4 gap-2">
                                     <label className="flex flex-col gap-1">
                                       <span className="text-[9px] font-black text-gray-400">수량</span>
-                                      <input type="number" value={f.quantity} onChange={(e) => updateDraftField(i, 'quantity', e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300" min={0} />
+                                      <input type="number" value={f.quantity} onChange={(e) => updateDraftField(i, 'quantity', e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300" min={0} step={0.1} />
                                     </label>
                                     <label className="flex flex-col gap-1">
                                       <span className="text-[9px] font-black text-gray-400">단위</span>
@@ -306,20 +342,25 @@ export default function MealsPage() {
                                     </label>
                                     <label className="flex flex-col gap-1">
                                       <span className="text-[9px] font-black text-gray-400">kcal</span>
-                                      <input type="number" value={f.calories} onChange={(e) => updateDraftField(i, 'calories', e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300" min={0} />
+                                      <input type="number" value={draftDisplayValue(f, 'calories')} onChange={(e) => updateDraftField(i, 'calories', e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300" min={0} />
                                     </label>
                                     <label className="flex flex-col gap-1">
                                       <span className="text-[9px] font-black text-gray-400">탄수(g)</span>
-                                      <input type="number" value={f.carbs} onChange={(e) => updateDraftField(i, 'carbs', e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300" min={0} />
+                                      <input type="number" value={draftDisplayValue(f, 'carbs')} onChange={(e) => updateDraftField(i, 'carbs', e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-300" min={0} step={0.1} />
                                     </label>
                                   </div>
                                 </div>
                               ))}
+                              {editDraft.length === 0 && (
+                                <p className="text-[10px] font-bold text-rose-400 text-center py-2">
+                                  모든 항목이 삭제되었어요. "취소"하거나 식사 자체를 삭제(🗑)하세요.
+                                </p>
+                              )}
                               <div className="flex gap-2 justify-end pt-1">
                                 <button onClick={(e) => { e.stopPropagation(); cancelEditing(); }} disabled={isSavingEdit} className="flex items-center gap-1 text-[11px] font-black text-gray-500 bg-gray-100 px-3 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-50">
                                   <X size={12} /> 취소
                                 </button>
-                                <button onClick={(e) => { e.stopPropagation(); saveEdit(meal); }} disabled={isSavingEdit} className="flex items-center gap-1 text-[11px] font-black text-white bg-indigo-500 px-3 py-2 rounded-xl active:scale-95 transition-all shadow-sm shadow-indigo-100 disabled:opacity-50">
+                                <button onClick={(e) => { e.stopPropagation(); saveEdit(meal); }} disabled={isSavingEdit || editDraft.length === 0} className="flex items-center gap-1 text-[11px] font-black text-white bg-indigo-500 px-3 py-2 rounded-xl active:scale-95 transition-all shadow-sm shadow-indigo-100 disabled:opacity-50">
                                   {isSavingEdit ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                                   저장
                                 </button>
@@ -327,19 +368,25 @@ export default function MealsPage() {
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              {meal.parsedFoods.map((f, i) => (
-                                <div key={i} className="flex items-center justify-between p-2 rounded-xl border border-gray-50">
-                                  <div className="flex flex-col">
-                                    <span className="text-xs font-bold text-gray-700">{f.name}</span>
-                                    <span className="text-[10px] text-gray-400">{f.quantity}{f.unit}</span>
+                              {meal.parsedFoods.map((f, i) => {
+                                // 표시값: base × quantity (예: 0.5 인분이면 절반)
+                                const qty = Number(f.quantity) || 0;
+                                const kcal = Math.round((Number(f.calories) || 0) * qty);
+                                const carbsG = Math.round((Number(f.carbs) || 0) * qty * 10) / 10;
+                                return (
+                                  <div key={i} className="flex items-center justify-between p-2 rounded-xl border border-gray-50">
+                                    <div className="flex flex-col">
+                                      <span className="text-xs font-bold text-gray-700">{f.name}</span>
+                                      <span className="text-[10px] text-gray-400">{f.quantity}{f.unit}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-[10px] font-black text-gray-500">{kcal} kcal</span>
+                                      <br/>
+                                      <span className="text-[9px] font-bold text-gray-400">탄수 {carbsG}g</span>
+                                    </div>
                                   </div>
-                                  <div className="text-right">
-                                    <span className="text-[10px] font-black text-gray-500">{f.calories} kcal</span>
-                                    <br/>
-                                    <span className="text-[9px] font-bold text-gray-400">탄수 {f.carbs}g</span>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
 
